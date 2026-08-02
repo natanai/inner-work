@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { CardFace, GiftIcon, strategyText } from './Cards'
 import type { GameState, Resolution } from './model'
+import { bonusOriginPhrase, nvcStory, strategyActionPhrase } from './storyNarrative'
 
 type Props = {
   game: GameState
@@ -29,7 +30,7 @@ function RevealMoment({ game }: { game: GameState }) {
       <header>
         <span>Simultaneous reveal</span>
         <h1>Three parts influenced one shared person.</h1>
-        <p>The Strategies were committed together. Now the table slows down to hear what each Cognition brought forward, what the person actually did, and what that shared action tended across the whole psyche.</p>
+        <p>The Strategies were committed together. Now the table slows down to notice which Needs motivated each Cognition, what the shared person did in response, and what that action tended across the whole psyche.</p>
       </header>
       <div className="desktop-story-reveal-cards">
         {game.resolution.map((line, index) => (
@@ -61,6 +62,7 @@ function StoryMoment({
   const human = line.cognitionId === 'alpha'
   const [showExample, setShowExample] = useState(false)
   const introduced = line.bonusCreated.map((bonus) => bonus.need)
+  const generatedStory = nvcStory(game, line)
 
   return (
     <section className="desktop-story-turn">
@@ -74,21 +76,21 @@ function StoryMoment({
       </button>
       <div className="desktop-story-reflection">
         <span>Story {index + 1} of 3 · {line.cognitionName}</span>
-        <h1>How did this part influence what the whole person did?</h1>
-        <p className="desktop-story-theme">The Cognition brings forward a Need. The Strategy becomes an action performed by the one body and person shared by the entire psyche.</p>
+        <h1>Which Needs motivated this shared action?</h1>
+        <p className="desktop-story-theme">In NVC, behavior is understood as an attempt to meet underlying Needs. A Cognition carries part of that motivation; the one shared person performs the Strategy.</p>
         {human ? (
           <div className="desktop-story-writing collective-story-writing">
             <div className="collective-story-cues" aria-label="Story structure">
-              <p><span>1</span><b>Motivation</b><em>What Need did {line.cognitionName} bring forward?</em></p>
-              <p><span>2</span><b>Shared action</b><em>How did the person actually {line.strategy.title.replace(/[.!?]+$/, '').toLowerCase()}?</em></p>
-              <p><span>3</span><b>Wider effect</b><em>What else did it tend{introduced.length ? `, and how did it introduce ${introduced.join(' and ')} as a Bonus Need` : ''}?</em></p>
+              <p><span>1</span><b>Need</b><em>Which Need was {line.cognitionName} seeking to meet?</em></p>
+              <p><span>2</span><b>Shared action</b><em>What did the person actually do when they chose to {strategyActionPhrase(line.strategy)}?</em></p>
+              <p><span>3</span><b>Wider effect</b><em>What other Needs did that action tend{introduced.length ? `, and how did it introduce ${introduced.join(' and ')} as a Bonus Need` : ''}?</em></p>
             </div>
-            <label htmlFor="desktop-human-story">Tell the story in your own words.</label>
+            <label htmlFor="desktop-human-story">Tell the Need-and-Strategy story in your own words.</label>
             <textarea
               id="desktop-human-story"
               value={humanStory}
               onChange={(event) => setHumanStory(event.target.value)}
-              placeholder={`${line.cognitionName} brought forward… The shared person chose to… It also…`}
+              placeholder={`${line.cognitionName} was motivated by its need for… Through its influence, the shared person chose to… That action also…`}
             />
             <div className="collective-story-example-actions">
               <button className="quiet" onClick={() => setShowExample((visible) => !visible)}>{showExample ? 'Hide example' : 'See an example'}</button>
@@ -96,12 +98,12 @@ function StoryMoment({
             {showExample && (
               <aside className="collective-story-example">
                 <span>Generated from this exact play</span>
-                <blockquote>{line.story}</blockquote>
-                <button className="quiet" onClick={() => setHumanStory(line.story)}>Use as a starting point</button>
+                <blockquote>{generatedStory}</blockquote>
+                <button className="quiet" onClick={() => setHumanStory(generatedStory)}>Use as a starting point</button>
               </aside>
             )}
           </div>
-        ) : <blockquote className="collective-story-npc">{line.story}</blockquote>}
+        ) : <blockquote className="collective-story-npc">{generatedStory}</blockquote>}
         <p className="desktop-story-card-text">{strategyText(line.strategy)}</p>
         <MatchList line={line} />
       </div>
@@ -128,7 +130,7 @@ function RoundSummary({ game }: { game: GameState }) {
           {ledger.bonusAwards.map((award) => <p key={award.bonusId}><span>{award.cognitionNames.join(' & ')} · {award.need}</span><b>+{award.pointsEach} each</b></p>)}
           {ledger.privateAwards.length === 0 && ledger.bonusAwards.length === 0 && <p><span>No individual gifts moved.</span></p>}
         </article>
-        {ledger.bonusCreated.length > 0 && <article><h2>Bonus Needs arriving next round</h2>{ledger.bonusCreated.map((bonus) => <p key={bonus.id}><span>{bonus.need} · introduced when {bonus.sourceCognitionName} brought forward {bonus.sourceStrategyTitle}</span><b><GiftIcon variation={1} />{bonus.gifts}</b></p>)}</article>}
+        {ledger.bonusCreated.length > 0 && <article><h2>Bonus Needs arriving next round</h2>{ledger.bonusCreated.map((bonus) => <p key={bonus.id}><span>{bonus.need} · {bonusOriginPhrase(bonus)}</span><b><GiftIcon variation={1} />{bonus.gifts}</b></p>)}</article>}
       </div>
     </section>
   )
