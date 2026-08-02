@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { CardFace, GiftIcon } from './Cards'
+import { CardFace, GiftIcon, Magnifier } from './Cards'
 import type { Cognition, GameState } from './model'
 import { analyzeStrategy, applyTrade, generateTradeProposals, type StrategyAnalysis, type TradeProposal } from './trading'
 
@@ -66,19 +66,23 @@ function OwnershipBoard({ game }: { game: GameState }) {
 function PrivateGoal({ game }: { game: GameState }) {
   const player = game.cognitions.find((cognition) => cognition.human)
   if (!player) return null
-  const known = player.privateVisible || player.magnifierUsed
   return (
-    <section className={`private-goal ${known ? 'known' : 'unknown'}`}>
+    <section className={`private-goal ${player.privateVisible ? 'known' : 'unknown'}`}>
       <span>Private strategy</span>
-      {known ? (
+      {player.privateVisible ? (
         <>
-          <h2>You remember: {player.privateNeed.card.need}</h2>
+          <h2>Visible through the magnifying glass: {player.privateNeed.card.need}</h2>
           <p>Any Cognition’s <strong>legally played</strong> Strategy can incidentally tend this Need. Its gift still goes into your individual score.</p>
+        </>
+      ) : player.magnifierUsed ? (
+        <>
+          <h2>Your magnifying glass has been used.</h2>
+          <p>The card is face down again. Rely on what you remember from setup or your one review; the app will not continue displaying or automatically flagging the answer.</p>
         </>
       ) : (
         <>
-          <h2>Your Private Need is still hidden.</h2>
-          <p>Use the magnifying glass to review it. Once known, this discussion screen will flag Strategies and trades that can incidentally tend it.</p>
+          <h2>Your Private Need remains face down.</h2>
+          <p>You saw it during setup. Use the visible magnifying-glass control once this Situation when you need to check your memory.</p>
         </>
       )}
     </section>
@@ -88,7 +92,7 @@ function PrivateGoal({ game }: { game: GameState }) {
 function HandPlanner({ game }: { game: GameState }) {
   const player = game.cognitions.find((cognition) => cognition.human)
   if (!player) return null
-  const privateKnown = player.privateVisible || player.magnifierUsed
+  const privateKnown = player.privateVisible
   return (
     <section className="discussion-section hand-planner">
       <header><span>Your hand</span><h2>Why each Strategy is—or is not—legal for you.</h2></header>
@@ -107,7 +111,7 @@ function HandPlanner({ game }: { game: GameState }) {
                   ? <p><b>Playable because:</b> It tends {responsibilityText(analysis)}.</p>
                   : <p><b>Why not:</b> It does not currently tend your own Public Needs or an active Bonus Need.</p>}
                 {helps && <p><b>Also helps the group:</b> {helps}.</p>}
-                {privateKnown && analysis.tendsOwnPrivate && <p className="private-opportunity"><b>Private opportunity:</b> It also tends your remembered Private Need, {player.privateNeed.card.need}.</p>}
+                {privateKnown && analysis.tendsOwnPrivate && <p className="private-opportunity"><b>Visible private opportunity:</b> It also tends {player.privateNeed.card.need}.</p>}
                 {!analysis.playable && targets && <p className="trade-opportunity"><b>Trade opportunity:</b> {targets}.</p>}
               </div>
             </article>
@@ -128,7 +132,7 @@ function ProposalCard({
   onAccept: () => void
 }) {
   const player = game.cognitions.find((cognition) => cognition.human)
-  const privateKnown = Boolean(player && (player.privateVisible || player.magnifierUsed))
+  const privateKnown = Boolean(player?.privateVisible)
   return (
     <article className={`trade-proposal ${proposal.mutualUpgrade ? 'mutual-upgrade' : ''}`}>
       <header>
@@ -151,7 +155,7 @@ function ProposalCard({
         </section>
       </div>
       {privateKnown && proposal.playerReceives.tendsOwnPrivate && (
-        <p className="private-opportunity"><b>Especially useful:</b> the offered card also tends your remembered Private Need.</p>
+        <p className="private-opportunity"><b>Visible private opportunity:</b> the offered card also tends the Private Need currently under the magnifying glass.</p>
       )}
       <p className="trade-secrecy">Only this proposed return card is revealed. The rest of {proposal.npcName}’s hand stays hidden.</p>
       <button className="primary" onClick={onAccept}>Accept this trade</button>
@@ -169,23 +173,54 @@ export function TradeDiscussionLayer({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
+  const [privateReviewOpen, setPrivateReviewOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const proposals = useMemo(() => generateTradeProposals(game), [game])
+  const player = game.cognitions.find((cognition) => cognition.human)
 
   const accept = (proposal: TradeProposal) => {
     onGameChange(applyTrade(game, proposal))
     setNotice(`Trade completed with ${proposal.npcName}: you received “${proposal.npcGives.title}.”`)
   }
 
+  const reviewPrivate = () => {
+    if (!player || player.magnifierUsed || game.phase !== 'planning') return
+    onGameChange({
+      ...game,
+      cognitions: game.cognitions.map((cognition) => cognition.id === player.id
+        ? { ...cognition, privateVisible: true, magnifierUsed: true }
+        : cognition),
+    })
+    setPrivateReviewOpen(true)
+  }
+
+  const closePrivateReview = () => {
+    if (player) {
+      onGameChange({
+        ...game,
+        cognitions: game.cognitions.map((cognition) => cognition.id === player.id
+          ? { ...cognition, privateVisible: false }
+          : cognition),
+      })
+    }
+    setPrivateReviewOpen(false)
+  }
+
   return (
     <div className="discussion-layer">
       {children}
       {game.phase === 'planning' && (
-        <button className="discussion-launch" onClick={() => setOpen(true)}>
-          <span>Discussion phase</span>
-          <strong>Plan & trade</strong>
-          {proposals.length > 0 && <b>{proposals.length}</b>}
-        </button>
+        <>
+          <button className="discussion-launch" onClick={() => setOpen(true)}>
+            <span>Discussion phase</span>
+            <strong>Plan & trade</strong>
+            {proposals.length > 0 && <b>{proposals.length}</b>}
+          </button>
+          <button className={`magnifier-launch ${player?.magnifierUsed ? 'used' : ''}`} onClick={reviewPrivate} disabled={!player || player.magnifierUsed}>
+            <Magnifier used={Boolean(player?.magnifierUsed)} disabled={Boolean(!player || player.magnifierUsed)} onClick={() => undefined} />
+            <span>{player?.magnifierUsed ? 'Magnifier used' : 'Review Private Need'}</span>
+          </button>
+        </>
       )}
 
       {open && (
@@ -210,6 +245,19 @@ export function TradeDiscussionLayer({
             <HandPlanner game={game} />
             <footer><button className="primary" onClick={() => setOpen(false)}>Return to planning</button></footer>
           </div>
+        </dialog>
+      )}
+
+      {privateReviewOpen && player && (
+        <dialog open className="private-review-dialog" onClick={closePrivateReview} aria-label="Review your Private Need">
+          <section onClick={(event) => event.stopPropagation()}>
+            <span>Magnifying glass · one review this Situation</span>
+            <h1>Look carefully, then return it face down.</h1>
+            <p>Any Cognition may incidentally tend this Need through a legally played Strategy. The individual point belongs to you.</p>
+            <div><CardFace kind="need" id={player.privateNeed.card.id} /></div>
+            <strong>{player.privateNeed.card.feeling}: {player.privateNeed.card.need}</strong>
+            <button className="primary" onClick={closePrivateReview}>Return it face down</button>
+          </section>
         </dialog>
       )}
     </div>
