@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { CardFace, GiftIcon, strategyText } from './Cards'
 import type { GameState, Resolution } from './model'
 
@@ -33,7 +33,7 @@ function RevealMoment({ game }: { game: GameState }) {
       </header>
       <div className="desktop-story-reveal-cards">
         {game.resolution.map((line, index) => (
-          <article key={line.cognitionId} style={{ '--story-order': index } as React.CSSProperties}>
+          <article key={line.cognitionId} style={{ '--story-order': index } as CSSProperties}>
             <CardFace kind="strategy" id={line.strategy.id} />
             <strong>{line.cognitionName}</strong>
           </article>
@@ -63,7 +63,7 @@ function StoryMoment({
     <section className="desktop-story-turn">
       <div className="desktop-story-context">
         <span>Current Situation</span>
-        <button onClick={() => undefined} tabIndex={-1} aria-hidden="true"><CardFace kind="situation" id={game.situation.id} /></button>
+        <div><CardFace kind="situation" id={game.situation.id} /></div>
         <strong>{game.situation.title}</strong>
       </div>
       <button className="desktop-story-played-card" onClick={() => onInspectStrategy(line.strategy.id, line.strategy.title)}>
