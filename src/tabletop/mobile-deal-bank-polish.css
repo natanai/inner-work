@@ -1,0 +1,193 @@
+@media (max-width: 760px) {
+  /* Keep every NPC card inside its own half of the deal table. */
+  .mobile-deal-opponents {
+    align-items: start;
+    gap: 10px;
+  }
+
+  .mobile-deal-opponents .mobile-deal-cognition {
+    padding: 9px 7px 12px;
+  }
+
+  .mobile-deal-opponents .mobile-deal-need-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+  }
+
+  .mobile-deal-opponents .mobile-deal-need,
+  .mobile-deal-opponents .mobile-deal-private {
+    width: auto;
+    min-width: 0;
+  }
+
+  .mobile-deal-opponents .mobile-deal-hand {
+    width: 132px;
+    height: 132px;
+    margin-top: 12px;
+  }
+
+  .mobile-deal-opponents .mobile-deal-hand-card {
+    width: 82px !important;
+  }
+
+  .mobile-deal-opponents .mobile-deal-hand-card-1 {
+    transform: translateX(-76%) rotate(-7deg) !important;
+  }
+
+  .mobile-deal-opponents .mobile-deal-hand-card-2 {
+    transform: translateX(-57%) rotate(-2deg) !important;
+  }
+
+  .mobile-deal-opponents .mobile-deal-hand-card-3 {
+    transform: translateX(-38%) rotate(2deg) !important;
+  }
+
+  .mobile-deal-opponents .mobile-deal-hand-card-4 {
+    transform: translateX(-19%) rotate(7deg) !important;
+  }
+
+  .mobile-deal-cognition.human {
+    margin-top: 2px;
+  }
+
+  /* A small physical bank sits at the table edge above the persistent navigation. */
+  .mobile-inventory-bank {
+    position: fixed;
+    z-index: 178;
+    left: 50%;
+    bottom: calc(55px + env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+    width: min(296px, calc(100vw - 24px));
+    min-height: 47px;
+    padding: 4px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255, 239, 198, .4);
+    border-radius: 16px 16px 9px 9px;
+    background: rgba(76, 32, 24, .96);
+    color: #fff1cc;
+    box-shadow: 0 -5px 18px rgba(42, 18, 12, .25), 0 8px 20px rgba(42, 18, 12, .28);
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-bank-item {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 5px;
+    min-width: 0;
+    min-height: 39px;
+    margin: 0;
+    padding: 3px 7px;
+    border: 0;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, .07);
+    color: inherit;
+    text-align: left;
+  }
+
+  .mobile-bank-item > span {
+    align-self: end;
+    overflow: hidden;
+    color: #e8c879;
+    font-size: .46rem;
+    font-weight: 800;
+    letter-spacing: .055em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .mobile-bank-item > strong {
+    align-self: start;
+    font-size: .72rem;
+    line-height: 1.1;
+  }
+
+  .mobile-bank-group .gift-piece,
+  .mobile-bank-personal > b,
+  .mobile-bank-magnifier > svg {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    width: 25px;
+    height: 25px;
+  }
+
+  .mobile-bank-personal > b {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #efbd43;
+    color: #522c20;
+    font: 800 .9rem 'Fraunces', serif;
+  }
+
+  .mobile-bank-magnifier {
+    cursor: pointer;
+  }
+
+  .mobile-bank-magnifier > svg {
+    overflow: visible;
+    fill: rgba(239, 189, 67, .12);
+    stroke: #efbd43;
+    stroke-linecap: round;
+    stroke-width: 3.2;
+  }
+
+  .mobile-bank-magnifier .shine {
+    fill: none;
+    stroke: rgba(255, 250, 225, .75);
+    stroke-width: 2;
+  }
+
+  .mobile-bank-magnifier:disabled {
+    cursor: default;
+    opacity: .55;
+  }
+
+  .mobile-bank-magnifier.used > svg {
+    filter: grayscale(.35);
+  }
+
+  /* The inventory occupies the first row above the navigation. */
+  .mobile-play-page:not(.mobile-tab-play) {
+    padding-bottom: calc(116px + env(safe-area-inset-bottom));
+  }
+
+  html[data-strategy-hand='undocked'] .mobile-tab-play {
+    padding-bottom: calc(196px + env(safe-area-inset-bottom));
+  }
+
+  html[data-strategy-hand='undocked'] .mobile-tab-play .mobile-action-dock {
+    bottom: calc(108px + env(safe-area-inset-bottom));
+  }
+
+  @media (max-width: 360px) {
+    .mobile-inventory-bank {
+      width: calc(100vw - 16px);
+    }
+
+    .mobile-bank-item {
+      grid-template-columns: 23px minmax(0, 1fr);
+      padding-inline: 5px;
+    }
+
+    .mobile-bank-group .gift-piece,
+    .mobile-bank-personal > b,
+    .mobile-bank-magnifier > svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+}
+
+@media (min-width: 761px) {
+  .mobile-inventory-bank {
+    display: none;
+  }
+}
