@@ -63,7 +63,7 @@ function OwnershipBoard({ game }: { game: GameState }) {
   )
 }
 
-function PrivateGoal({ game }: { game: GameState }) {
+function PrivateGoal({ game, onReview }: { game: GameState; onReview: () => void }) {
   const player = game.cognitions.find((cognition) => cognition.human)
   if (!player) return null
   return (
@@ -82,7 +82,8 @@ function PrivateGoal({ game }: { game: GameState }) {
       ) : (
         <>
           <h2>Your Private Need remains face down.</h2>
-          <p>You saw it during setup. Use the visible magnifying-glass control once this Situation when you need to check your memory.</p>
+          <p>You saw it during setup. You may review it once during this Situation.</p>
+          <button className="private-goal-review" onClick={onReview}>Review with the magnifying glass</button>
         </>
       )}
     </section>
@@ -185,6 +186,7 @@ export function TradeDiscussionLayer({
 
   const reviewPrivate = () => {
     if (!player || player.magnifierUsed || game.phase !== 'planning') return
+    setOpen(false)
     onGameChange({
       ...game,
       cognitions: game.cognitions.map((cognition) => cognition.id === player.id
@@ -213,7 +215,7 @@ export function TradeDiscussionLayer({
         <>
           <button className="discussion-launch" onClick={() => setOpen(true)}>
             <span>Discussion phase</span>
-            <strong>Plan & trade</strong>
+            <strong><span className="planning-label-desktop">Plan & trade</span><span className="planning-label-mobile">Planning tools</span></strong>
             {proposals.length > 0 && <b>{proposals.length}</b>}
           </button>
           <button className={`magnifier-launch ${player?.magnifierUsed ? 'used' : ''}`} onClick={reviewPrivate} disabled={!player || player.magnifierUsed}>
@@ -233,7 +235,7 @@ export function TradeDiscussionLayer({
 
             {notice && <p className="trade-notice">{notice}</p>}
             <OwnershipBoard game={game} />
-            <PrivateGoal game={game} />
+            <PrivateGoal game={game} onReview={reviewPrivate} />
 
             <section className="discussion-section trade-room">
               <header><span>Suggested trades</span><h2>NPCs look for exchanges that help both recipients play legally.</h2><p>Their hidden Private Needs may influence whether a proposal is attractive, but those Needs are never disclosed.</p></header>
