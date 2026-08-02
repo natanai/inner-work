@@ -1,227 +1,116 @@
 import { useState } from 'react'
-import type { StrategyCard } from '../data/cards'
-import type { BonusNeed, Cognition, GameState, Resolution } from './model'
-import { canPlay } from './model'
-import { CardBack, CardFace, Magnifier, NeedCardOnTable, type CardKind } from './Cards'
-import { Deck } from './DealScreen'
+import { CardFace, GiftIcon } from './Cards'
+import { DesktopPlayerHand, DesktopSituationTableau, type DesktopDetail, type DesktopInspection } from './DesktopTableau'
+import { DesktopStoryTable } from './DesktopStoryTable'
+import type { GameState } from './model'
 
-type InspectedCard = {
-  kind: CardKind
-  id: string
-  label: string
-}
+function DetailDialog({ game, detail, onClose }: { game: GameState; detail: DesktopDetail; onClose: () => void }) {
+  if (detail.kind === 'situation') {
+    const remaining = game.cognitions.flatMap((cognition) => cognition.publicNeeds).reduce((total, slot) => total + slot.gifts, 0)
+    const started = game.cognitions.flatMap((cognition) => cognition.publicNeeds).reduce((total, slot) => total + slot.setup.total, 0)
+    return (
+      <dialog open className="desktop-detail-dialog" onClick={onClose} aria-label="Situation details">
+        <section onClick={(event) => event.stopPropagation()}>
+          <button className="dialog-close" onClick={onClose}>×</button>
+          <span>Situation progress</span><h1>{game.situation.title}</h1>
+          <div className="desktop-detail-stats"><p><b>{remaining}</b><span>required gifts remain</span></p><p><b>{started - remaining}</b><span>tended this Situation</span></p><p><b>{game.sharedScore}</b><span>shared bank total</span></p></div>
+          <h2>Setup effects</h2>
+          <div className="desktop-situation-effects">{game.situation.effects.map((effect) => <p key={effect.need}><strong>{effect.need}</strong><b>+{effect.amount}</b></p>)}</div>
+          <p className="desktop-detail-note"><b>{game.situation.feelingMultiplier}</b> Needs are doubled after the Situation modifiers are added.</p>
+          <p className="desktop-detail-note">The Situation resolves only when every gift on every required Public Need is gone.</p>
+        </section>
+      </dialog>
+    )
+  }
 
-function resolvedNeedNames(lines: Resolution[]): Set<string> {
-  return new Set(
-    lines
-      .filter((line) => line.legal)
-      .flatMap((line) => line.strategy.effects)
-      .filter((effect) => effect.amount > 0)
-      .map((effect) => effect.need),
-  )
-}
+  if (detail.kind === 'bonus') {
+    return (
+      <dialog open className="desktop-detail-dialog" onClick={onClose} aria-label="Bonus Need details">
+        <section onClick={(event) => event.stopPropagation()}>
+          <button className="dialog-close" onClick={onClose}>×</button>
+          <span>Optional Bonus Need</span><h1>{detail.bonus.need}</h1>
+          <div className="desktop-detail-stats"><p><b>{detail.bonus.gifts}</b><span>individual gifts remain</span></p><p><b>{detail.bonus.availableRound <= game.round ? 'Now' : `Round ${detail.bonus.availableRound}`}</b><span>available</span></p></div>
+          <p className="desktop-detail-note">Created by <b>{detail.bonus.sourceCognitionName}</b> using “{detail.bonus.sourceStrategyTitle}.” Bonus gifts become individual points and do not block the next Situation.</p>
+        </section>
+      </dialog>
+    )
+  }
 
-function NpcSeat({
-  cognition,
-  resolution,
-  tendedNeeds,
-  onInspect,
-}: {
-  cognition: Cognition
-  resolution?: Resolution
-  tendedNeeds: Set<string>
-  onInspect: (card: InspectedCard) => void
-}) {
+  const { cognition, slot } = detail
   return (
-    <section className={`npc-seat npc-${cognition.id}`}>
-      <header><span>NPC</span><strong>{cognition.name}</strong><b>{cognition.privateScore + cognition.bonusScore} individual</b></header>
-      <div className="npc-needs">
-        {cognition.publicNeeds.map((slot) => (
-          <NeedCardOnTable
-            key={slot.card.id}
-            slot={slot}
-            highlighted={tendedNeeds.has(slot.card.need)}
-            onInspect={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}` })}
-          />
-        ))}
-        <div className="private-back"><CardBack kind="need" /><span>Private</span></div>
-      </div>
-      <div className="npc-hand" aria-label={`${cognition.hand.length} hidden Strategy cards`}>
-        {cognition.hand.map((card, index) => (
-          <CardBack key={card.id} kind="strategy" style={{ transform: `translateX(${index * 22}px) rotate(${(index - 1.5) * 4}deg)` }} />
-        ))}
-      </div>
-      <p>{resolution ? <>Revealed <strong>{resolution.strategy.title}</strong></> : 'Choosing privately'}</p>
-    </section>
-  )
-}
-
-function Reveal({
-  lines,
-  onInspect,
-}: {
-  lines: Resolution[]
-  onInspect: (card: InspectedCard) => void
-}) {
-  return (
-    <section className="reveal-tray" aria-live="polite">
-      <span className="caption">Strategies revealed together</span>
-      <div className="revealed-row">
-        {lines.map((line) => (
-          <article key={line.cognitionId}>
-            <button
-              className="inspectable-card"
-              onClick={() => onInspect({ kind: 'strategy', id: line.strategy.id, label: line.strategy.title })}
-              aria-label={`Enlarge ${line.strategy.title}`}
-            >
-              <CardFace kind="strategy" id={line.strategy.id} />
-            </button>
-            <strong>{line.cognitionName}</strong>
-            <small>{line.legal ? `+${line.shared} shared · +${line.private} private` : 'Discarded'}</small>
-          </article>
-        ))}
-      </div>
-      <div className="story-notes">{lines.map((line) => <p key={line.cognitionId}>{line.story}</p>)}</div>
-    </section>
-  )
-}
-
-function PlayerSeat({
-  cognition,
-  phase,
-  bonusNeeds,
-  tendedNeeds,
-  onSelect,
-  onRevealPrivate,
-  onInspect,
-}: {
-  cognition: Cognition
-  phase: GameState['phase']
-  bonusNeeds: BonusNeed[]
-  tendedNeeds: Set<string>
-  onSelect: (id: string) => void
-  onRevealPrivate: () => void
-  onInspect: (card: InspectedCard) => void
-}) {
-  return (
-    <section className="player-seat">
-      <header className="player-title"><div><span>You are</span><h2>{cognition.name}</h2></div><b>{cognition.privateScore + cognition.bonusScore} individual points</b></header>
-      <div className="player-needs">
-        <div>
-          <span className="caption">Your Public Needs</span>
-          <div className="large-needs">
-            {cognition.publicNeeds.map((slot) => (
-              <NeedCardOnTable
-                key={slot.card.id}
-                slot={slot}
-                large
-                highlighted={tendedNeeds.has(slot.card.need)}
-                onInspect={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}` })}
-              />
-            ))}
+    <dialog open className="desktop-detail-dialog desktop-need-detail" onClick={onClose} aria-label={`${slot.card.feeling}: ${slot.card.need}`}>
+      <section onClick={(event) => event.stopPropagation()}>
+        <button className="dialog-close" onClick={onClose}>×</button>
+        <div className="desktop-detail-need-art"><CardFace kind="need" id={slot.card.id} /></div>
+        <div><span>{cognition.name} · Required Public Need</span><h1>{slot.card.feeling}: {slot.card.need}</h1>
+          <div className="desktop-gift-equation">
+            <p><b>{slot.setup.base}</b><span>base gift</span></p>
+            <i>+</i><p><b>{slot.setup.situation}</b><span>from Situation</span></p>
+            {slot.setup.multiplied && <><i>×</i><p><b>2</b><span>{slot.card.feeling} multiplier</span></p></>}
+            <i>=</i><p><b>{slot.setup.total}</b><span>started here</span></p>
           </div>
+          <p className="desktop-detail-note"><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} /><b>{slot.gifts}</b> required gift{slot.gifts === 1 ? '' : 's'} remain.</p>
         </div>
-        <div>
-          <span className="caption">Your Private Need</span>
-          <div className="private-station">
-            {cognition.privateVisible ? (
-              <NeedCardOnTable
-                slot={cognition.privateNeed}
-                large
-                highlighted={tendedNeeds.has(cognition.privateNeed.card.need)}
-                onInspect={() => onInspect({ kind: 'need', id: cognition.privateNeed.card.id, label: `${cognition.privateNeed.card.feeling}: ${cognition.privateNeed.card.need}` })}
-              />
-            ) : <CardBack kind="need" className="large-private" />}
-            <Magnifier used={cognition.magnifierUsed} disabled={phase !== 'planning' || cognition.magnifierUsed} onClick={onRevealPrivate} />
-          </div>
-        </div>
-      </div>
-      <div className="hand-area">
-        <header><div><span className="caption">Your Strategy hand</span><strong>Choose one card</strong></div><small>A Strategy may tend your Public Needs or any active Bonus Need.</small></header>
-        <div className="player-hand">
-          {cognition.hand.map((card: StrategyCard) => {
-            const selected = card.id === cognition.selected
-            const legal = canPlay(cognition, card, bonusNeeds)
-            return (
-              <div className={`hand-card ${selected ? 'selected' : ''}`} key={card.id}>
-                <button className="card-choice" disabled={phase !== 'planning'} onClick={() => onSelect(card.id)} aria-pressed={selected}>
-                  <CardFace kind="strategy" id={card.id} />
-                  <span className={legal ? 'playable' : 'discard'}>{legal ? 'Playable' : 'Discard only'}</span>
-                </button>
-                <button className="inspect" onClick={() => onInspect({ kind: 'strategy', id: card.id, label: card.title })} aria-label={`Enlarge ${card.title}`}>View</button>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
+      </section>
+    </dialog>
   )
 }
 
-export function PlayScreen({
-  game,
-  onChange,
-  onNextSituation,
-  onEnd,
-}: {
+export function PlayScreen({ game, onChange, onNextSituation, onEnd }: {
   game: GameState
   onChange: (game: GameState) => void
   onNextSituation: () => void
   onEnd: () => void
 }) {
-  const [inspected, setInspected] = useState<InspectedCard | null>(null)
-  const alpha = game.cognitions[0]
-  const beta = game.cognitions[1]
-  const gamma = game.cognitions[2]
-  const betaResult = game.resolution.find((line) => line.cognitionId === 'beta')
-  const gammaResult = game.resolution.find((line) => line.cognitionId === 'gamma')
-  const tendedNeeds = resolvedNeedNames(game.resolution)
-  const activeBonusNeeds = game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round)
+  const [inspected, setInspected] = useState<DesktopInspection | null>(null)
+  const [detail, setDetail] = useState<DesktopDetail | null>(null)
+  const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
+
+  const select = (id: string) => onChange({
+    ...game,
+    cognitions: game.cognitions.map((cognition) => cognition.id === player.id
+      ? { ...cognition, selected: cognition.selected === id ? null : id }
+      : cognition),
+  })
+
+  const reviewPrivate = () => window.dispatchEvent(new CustomEvent('inner-work:review-private'))
 
   return (
-    <main className="play-page">
-      <header className="game-top">
+    <main className="play-page desktop-parity-page">
+      <header className="desktop-game-header">
         <div><span>Inner Work · Situation {game.situationNumber}</span><strong>{game.situation.title}</strong></div>
-        <div><b>{game.sharedScore} shared gifts</b><b>Round {game.round}</b><button onClick={onEnd}>End day</button></div>
+        <div><b><GiftIcon variation={0} />{game.sharedScore} shared</b><b>Round {game.round}</b><button onClick={onEnd}>End day</button></div>
       </header>
-      <section className="game-table">
-        <NpcSeat cognition={beta} resolution={betaResult} tendedNeeds={tendedNeeds} onInspect={setInspected} />
-        <section className="center-table">
-          <div className="deck-row"><Deck kind="situation" count={game.situationDeck.length} /><Deck kind="need" count={game.needDeck.length} /><Deck kind="strategy" count={game.strategyDeck.length} /></div>
-          <button
-            className="inspectable-card situation-inspect"
-            onClick={() => setInspected({ kind: 'situation', id: game.situation.id, label: game.situation.title })}
-            aria-label={`Enlarge ${game.situation.title}`}
-          >
-            <CardFace kind="situation" id={game.situation.id} className="center-situation" />
-          </button>
-          {activeBonusNeeds.length > 0 && <p className="turn-prompt"><strong>{activeBonusNeeds.length} active Bonus Need{activeBonusNeeds.length === 1 ? '' : 's'}</strong><span>{activeBonusNeeds.map((bonus) => bonus.need).join(' · ')}</span></p>}
-          {game.phase === 'planning' ? (
-            <div className="turn-prompt"><b>1</b><p><strong>Choose one Strategy.</strong><span>Cognitions β and γ choose in secret. All three cards reveal together.</span></p></div>
-          ) : <Reveal lines={game.resolution} onInspect={setInspected} />}
-        </section>
-        <NpcSeat cognition={gamma} resolution={gammaResult} tendedNeeds={tendedNeeds} onInspect={setInspected} />
-        <PlayerSeat
-          cognition={alpha}
-          phase={game.phase}
-          bonusNeeds={activeBonusNeeds}
-          tendedNeeds={tendedNeeds}
-          onSelect={(id) => onChange({ ...game, cognitions: game.cognitions.map((cognition) => cognition.id === 'alpha' ? { ...cognition, selected: cognition.selected === id ? null : id } : cognition) })}
-          onRevealPrivate={() => onChange({ ...game, cognitions: game.cognitions.map((cognition) => cognition.id === 'alpha' ? { ...cognition, privateVisible: true, magnifierUsed: true } : cognition) })}
-          onInspect={setInspected}
+
+      <DesktopSituationTableau game={game} onInspect={setInspected} onDetail={setDetail} onReviewPrivate={reviewPrivate} />
+
+      {game.phase === 'planning' && (
+        <DesktopPlayerHand game={game} onSelect={select} onInspect={setInspected} />
+      )}
+
+      {game.phase === 'planning' && (
+        <footer className="desktop-action-bar">
+          <div><span>Your turn</span><strong>{player.selected ? 'Your response is ready.' : 'Choose a Strategy, trade, or prepare a discard.'}</strong></div>
+          <button className="primary" disabled={!player.selected} onClick={() => onChange(game)}>Reveal all Strategies</button>
+        </footer>
+      )}
+
+      {game.phase !== 'planning' && (
+        <DesktopStoryTable
+          game={game}
+          onContinue={() => onChange(game)}
+          onNextSituation={onNextSituation}
+          onInspectStrategy={(id, label) => setInspected({ kind: 'strategy', id, label })}
         />
-      </section>
-      <footer className="action-bar">
-        <div><span>{game.phase === 'planning' ? 'Your turn' : game.phase === 'complete' ? 'Situation complete' : 'Round complete'}</span><strong>{game.phase === 'planning' ? alpha.selected ? 'Your card is chosen.' : 'Choose a Strategy from your hand.' : game.phase === 'complete' ? 'Every Public Need has been tended.' : 'Some gifts remain on Public Needs.'}</strong></div>
-        {game.phase === 'planning' && <button className="primary" disabled={!alpha.selected} onClick={() => onChange(game)}>Reveal all Strategies</button>}
-        {game.phase === 'revealed' && <button className="primary" onClick={() => onChange(game)}>Draw the next round</button>}
-        {game.phase === 'complete' && <button className="primary" onClick={onNextSituation}>Draw the next Situation</button>}
-      </footer>
+      )}
+
+      {detail && <DetailDialog game={game} detail={detail} onClose={() => setDetail(null)} />}
       {inspected && (
-        <dialog open className="card-dialog" onClick={() => setInspected(null)} aria-label={inspected.label}>
-          <div className={`card-dialog-inner zoom-${inspected.kind}`} onClick={(event: { stopPropagation(): void }) => event.stopPropagation()}>
+        <dialog open className="card-dialog desktop-card-inspector" onClick={() => setInspected(null)} aria-label={inspected.label}>
+          <div className={`card-dialog-inner zoom-${inspected.kind}`} onClick={(event) => event.stopPropagation()}>
             <button className="dialog-close" onClick={() => setInspected(null)} aria-label="Close enlarged card">×</button>
             <CardFace kind={inspected.kind} id={inspected.id} className="zoomed-card" />
+            {inspected.detail && <p>{inspected.detail}</p>}
           </div>
         </dialog>
       )}
