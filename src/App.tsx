@@ -10,16 +10,23 @@ import {
 
 type Screen = 'home' | 'play' | 'day-end'
 type Phase = 'planning' | 'resolved' | 'situation-complete'
+type Controller = 'human' | 'npc'
+type NpcStyle = 'cooperative' | 'self-protective'
 
 type NeedSlot = {
   card: NeedCard
   boxes: number
 }
 
-type InnerPart = {
+type PlayerTemplate = {
   id: string
   name: string
   subtitle: string
+  controller: Controller
+  npcStyle?: NpcStyle
+}
+
+type Cognition = PlayerTemplate & {
   publicNeeds: NeedSlot[]
   privateNeed: NeedSlot
   privateVisible: boolean
@@ -30,7 +37,7 @@ type InnerPart = {
 }
 
 type GameState = {
-  parts: InnerPart[]
+  parts: Cognition[]
   situation: SituationCard
   situationDeck: SituationCard[]
   needDeck: NeedCard[]
@@ -51,10 +58,27 @@ type ResolutionLine = {
   privatePoints: number
 }
 
-const PART_TEMPLATES = [
-  { id: 'protector', name: 'The Protector', subtitle: 'Looks for safety, steadiness, and control.' },
-  { id: 'connector', name: 'The Connector', subtitle: 'Looks for belonging, mutuality, and care.' },
-  { id: 'explorer', name: 'The Explorer', subtitle: 'Looks for play, expression, and growth.' },
+const PLAYER_TEMPLATES: PlayerTemplate[] = [
+  {
+    id: 'alpha',
+    name: 'Cognition α',
+    subtitle: 'You · choose strategies for this cognition.',
+    controller: 'human',
+  },
+  {
+    id: 'beta',
+    name: 'Cognition β',
+    subtitle: 'NPC · tends to favor broad shared benefit.',
+    controller: 'npc',
+    npcStyle: 'cooperative',
+  },
+  {
+    id: 'gamma',
+    name: 'Cognition γ',
+    subtitle: 'NPC · tends to protect its own neglected needs.',
+    controller: 'npc',
+    npcStyle: 'self-protective',
+  },
 ]
 
 function shuffle<T>(input: T[]): T[] {
@@ -73,7 +97,7 @@ function drawOne<T>(deck: T[], recycle: T[]): [T, T[]] {
   return [card, rest]
 }
 
-function applySituationToParts(parts: InnerPart[], situation: SituationCard): InnerPart[] {
+function applySituationToParts(parts: Cognition[], situation: SituationCard): Cognition[] {
   return parts.map((part) => ({
     ...part,
     magnifyingUsed: false,
@@ -93,7 +117,7 @@ function buildInitialGame(): GameState {
   const situationDeck = shuffle(situations)
   const [situation, ...remainingSituations] = situationDeck
 
-  const parts: InnerPart[] = PART_TEMPLATES.map((template) => {
+  const parts: Cognition[] = PLAYER_TEMPLATES.map((template) => {
     const partNeeds = needDeck.slice(0, 3)
     needDeck = needDeck.slice(3)
     const hand = strategyDeck.slice(0, 4)
@@ -126,10 +150,63 @@ function buildInitialGame(): GameState {
   }
 }
 
-function strategyCanBePlayed(part: InnerPart, strategy: StrategyCard): boolean {
+function strategyCanBePlayed(part: Cognition, strategy: StrategyCard): boolean {
   return strategy.effects.some(
     (effect) => effect.amount > 0 && part.publicNeeds.some((slot) => slot.boxes > 0 && slot.card.need === effect.need),
   )
+}
+
+function scoreStrategyForNpc(part: Cognition, allParts: Cognition[], strategy: StrategyCard): number {
+  if (!strategyCanBePlayed(part, strategy)) return Number.NEGATIVE_INFINITY
+
+  let sharedBenefit = 0
+  let ownPublicBenefit = 0
+  let ownPrivateBenefit = 0
+  let publicHarm = 0
+
+  for (const effect of strategy.effects) {
+    if (effect.amount > 0) {
+      for (const target of allParts) {
+        for (const slot of target.publicNeeds) {
+          if (slot.card.need !== effect.need || slot.boxes === 0) continue
+          // A Strategy applies its full value to every matching Need; its value is never divided.
+          const tended = Math.min(slot.boxes, effect.amount)
+          sharedBenefit += tended
+          if (target.id === part.id) ownPublicBenefit += tended
+        }
+      }
+
+      if (part.privateNeed.card.need === effect.need && part.privateNeed.boxes > 0) {
+        ownPrivateBenefit += Math.min(part.privateNeed.boxes, effect.amount)
+      }
+    }
+
+    if (effect.amount < 0) {
+      for (const target of allParts) {
+        for (const slot of target.publicNeeds) {
+          if (slot.card.need === effect.need) publicHarm += Math.abs(effect.amount)
+        }
+      }
+    }
+  }
+
+  const jitter = Math.random() * 0.25
+  if (part.npcStyle === 'self-protective') {
+    return ownPublicBenefit * 5 + ownPrivateBenefit * 4 + sharedBenefit * 1.5 - publicHarm * 6 + jitter
+  }
+  return sharedBenefit * 5 + ownPublicBenefit * 1.5 + ownPrivateBenefit * 2 - publicHarm * 6 + jitter
+}
+
+function chooseNpcStrategy(part: Cognition, allParts: Cognition[]): string | null {
+  const ranked = part.hand
+    .map((strategy) => ({ strategy, score: scoreStrategyForNpc(part, allParts, strategy) }))
+    .filter((choice) => Number.isFinite(choice.score))
+    .sort((a, b) => b.score - a.score)
+
+  if (ranked[0]) return ranked[0].strategy.id
+
+  // With no legal play, the NPC discards an imperfect card rather than using hidden information to cheat.
+  return part.hand[Math.floor(Math.random() * part.hand.length)]?.id ?? null
 }
 
 function boxesLabel(count: number): string {
@@ -137,7 +214,7 @@ function boxesLabel(count: number): string {
   return `${count} gift ${count === 1 ? 'box' : 'boxes'}`
 }
 
-function generatedStory(situation: SituationCard, strategy: StrategyCard, part: InnerPart): string {
+function generatedStory(situation: SituationCard, strategy: StrategyCard, part: Cognition): string {
   const tended = strategy.effects
     .filter((effect) => effect.amount > 0)
     .map((effect) => effect.need)
@@ -163,8 +240,8 @@ function App() {
           <div className="eyebrow">A cooperative game for one whole person</div>
           <h1>Inner Work</h1>
           <p className="hero-copy">
-            Guide three inner parts through ordinary situations. Tend to visible needs, remember what is hidden,
-            and discover whether everyone inside can finish the day with something that matters to them.
+            Play as Cognition α alongside two locally simulated cognitions. Tend to visible needs, remember what is
+            hidden, and discover whether the shared psyche can finish the day with something that matters to everyone.
           </p>
           <div className="hero-actions">
             <button className="primary-button" onClick={startGame}>Begin a day</button>
@@ -174,16 +251,15 @@ function App() {
           </div>
           {rulesOpen && (
             <div className="overview-card">
-              <h2>Solo adaptation</h2>
+              <h2>Solo with two NPC cognitions</h2>
               <p>
-                You control three inner parts. Each has two public needs, one private need, and four strategies.
-                Choose one legal strategy for every part, then reveal all three together. Strategies may also help
-                another part—or quietly meet a private need.
+                You control Cognition α. Cognitions β and γ are simple rule-based NPCs with hidden hands and private
+                needs. After you commit a Strategy, both NPCs make their choices and all three Strategies reveal together.
               </p>
               <p>
-                This first playable foundation includes the complete Situation, Feeling/Need, and ordinary Strategy
-                datasets. Card trading and the seven Special Action cards are being added after the core resolution
-                rules are verified.
+                Every Strategy applies its full value to every matching Need in play. Its strength is never divided
+                between matching cards or players. Special Actions and deeper NPC negotiation will follow after the core
+                resolution rules are verified.
               </p>
             </div>
           )}
@@ -192,22 +268,24 @@ function App() {
         </section>
         <section className="principles-grid" aria-label="Game principles">
           <article><span>01</span><h2>Notice</h2><p>Feelings point toward needs that want attention.</p></article>
-          <article><span>02</span><h2>Choose</h2><p>No single strategy meets every part of a person.</p></article>
+          <article><span>02</span><h2>Negotiate</h2><p>Three cognitions act separately on behalf of one shared psyche.</p></article>
           <article><span>03</span><h2>Integrate</h2><p>Shared well-being matters alongside private experience.</p></article>
         </section>
       </main>
     )
   }
 
-  const selectedCount = game.parts.filter((part) => part.selectedStrategyId).length
-  const allSelected = selectedCount === game.parts.length
+  const humanPart = game.parts.find((part) => part.controller === 'human')
+  const humanReady = Boolean(humanPart?.selectedStrategyId)
   const allPublicTended = game.parts.every((part) => part.publicNeeds.every((slot) => slot.boxes === 0))
 
   const selectStrategy = (partId: string, strategyId: string) => {
     if (game.phase !== 'planning') return
     setGame((current) => current && ({
       ...current,
-      parts: current.parts.map((part) => part.id === partId ? { ...part, selectedStrategyId: strategyId } : part),
+      parts: current.parts.map((part) => part.id === partId && part.controller === 'human'
+        ? { ...part, selectedStrategyId: strategyId }
+        : part),
     }))
   }
 
@@ -215,7 +293,7 @@ function App() {
     if (game.phase !== 'planning') return
     setGame((current) => current && ({
       ...current,
-      parts: current.parts.map((part) => part.id === partId && !part.magnifyingUsed
+      parts: current.parts.map((part) => part.id === partId && part.controller === 'human' && !part.magnifyingUsed
         ? { ...part, magnifyingUsed: true, privateVisible: true }
         : part),
     }))
@@ -228,7 +306,7 @@ function App() {
       const from = current.parts.find((part) => part.id === fromPartId)
       const to = current.parts.find((part) => part.id === toPartId)
       const card = from?.hand.find((strategy) => strategy.id === strategyId)
-      if (!from || !to || !card || to.hand.length >= 6) return current
+      if (!from || from.controller !== 'human' || !to || !card || to.hand.length >= 6) return current
 
       return {
         ...current,
@@ -248,15 +326,24 @@ function App() {
   }
 
   const resolveRound = () => {
-    if (!allSelected || game.phase !== 'planning') return
+    if (!humanReady || game.phase !== 'planning') return
 
     setGame((current) => {
       if (!current) return current
-      let nextParts = current.parts.map((part) => ({ ...part, publicNeeds: part.publicNeeds.map((slot) => ({ ...slot })), privateNeed: { ...part.privateNeed } }))
+
+      const committedParts = current.parts.map((part) => part.controller === 'npc'
+        ? { ...part, selectedStrategyId: chooseNpcStrategy(part, current.parts) }
+        : part)
+
+      let nextParts = committedParts.map((part) => ({
+        ...part,
+        publicNeeds: part.publicNeeds.map((slot) => ({ ...slot })),
+        privateNeed: { ...part.privateNeed },
+      }))
       let groupPointsEarned = 0
       const lines: ResolutionLine[] = []
 
-      for (const actingPart of current.parts) {
+      for (const actingPart of committedParts) {
         const strategy = actingPart.hand.find((card) => card.id === actingPart.selectedStrategyId)
         if (!strategy) continue
         let lineGroup = 0
@@ -267,7 +354,7 @@ function App() {
           lines.push({
             part: actingPart.name,
             strategy: strategy.title,
-            story: `${actingPart.name} could not connect “${strategy.title}” to one of their public needs, so the card was discarded.`,
+            story: `${actingPart.name} could not connect “${strategy.title}” to one of its public needs, so the card was discarded.`,
             groupPoints: 0,
             privatePoints: 0,
           })
@@ -279,6 +366,7 @@ function App() {
             nextParts = nextParts.map((part) => {
               const publicNeeds = part.publicNeeds.map((slot) => {
                 if (slot.card.need !== effect.need || slot.boxes === 0) return slot
+                // The complete effect is independently applied to each matching Need.
                 const removed = Math.min(slot.boxes, effect.amount)
                 groupPointsEarned += removed
                 lineGroup += removed
@@ -326,7 +414,7 @@ function App() {
     })
   }
 
-  const refillHands = (parts: InnerPart[], currentDeck: StrategyCard[]): [InnerPart[], StrategyCard[]] => {
+  const refillHands = (parts: Cognition[], currentDeck: StrategyCard[]): [Cognition[], StrategyCard[]] => {
     let deck = currentDeck
     const used = parts.flatMap((part) => part.hand.filter((card) => card.id === part.selectedStrategyId))
     const nextParts = parts.map((part) => {
@@ -412,11 +500,11 @@ function App() {
       <main className="end-shell">
         <section className="end-card">
           <div className="eyebrow">The day is complete</div>
-          <h1>What did the whole person receive?</h1>
+          <h1>What did the whole psyche receive?</h1>
           <div className="end-score-grid">
             <article><strong>{game.groupScore}</strong><span>shared gift boxes</span></article>
             <article><strong>{game.situationsCompleted}</strong><span>situations completed</span></article>
-            <article><strong>{balance}%</strong><span>inner balance</span></article>
+            <article><strong>{balance}%</strong><span>cognitive balance</span></article>
           </div>
           <div className="part-results">
             {game.parts.map((part) => (
@@ -424,8 +512,8 @@ function App() {
             ))}
           </div>
           <p className="reflection-copy">
-            A high shared score shows how much the visible system received. Inner balance asks a different question:
-            did every part receive at least some care, or did one part flourish while another disappeared?
+            A high shared score shows how much the visible system received. Cognitive balance asks a different question:
+            did every cognition receive at least some care, or did one flourish while another disappeared?
           </p>
           <div className="hero-actions">
             <button className="primary-button" onClick={startGame}>Begin another day</button>
@@ -453,7 +541,7 @@ function App() {
       <section className="situation-panel">
         <div className="situation-symbol" aria-hidden="true">✦</div>
         <div>
-          <h2>What this situation asks from the system</h2>
+          <h2>What this situation asks from the psyche</h2>
           <div className="effect-row">
             {game.situation.effects.map((effect) => (
               <span key={effect.need}>{effect.need} <b>+{effect.amount}</b></span>
@@ -510,25 +598,33 @@ function App() {
                   <>
                     <span className="private-mark">?</span>
                     <strong>Private need</strong>
-                    <em>{part.privateNeed.boxes === 0 ? 'quietly tended' : 'remember what mattered'}</em>
+                    <em>{part.privateNeed.boxes === 0 ? 'quietly tended' : 'hidden from other cognitions'}</em>
                   </>
                 )}
               </div>
             </div>
 
             <div className="part-tools">
-              <button
-                className="tool-button"
-                disabled={part.magnifyingUsed || game.phase !== 'planning'}
-                onClick={() => revealPrivateNeed(part.id)}
-              >
-                ◉ {part.magnifyingUsed ? 'Magnifying glass used' : 'Reveal private need'}
-              </button>
-              <span>{part.selectedStrategyId ? 'Strategy committed' : 'Choose one strategy'}</span>
+              {part.controller === 'human' ? (
+                <button
+                  className="tool-button"
+                  disabled={part.magnifyingUsed || game.phase !== 'planning'}
+                  onClick={() => revealPrivateNeed(part.id)}
+                >
+                  ◉ {part.magnifyingUsed ? 'Magnifying glass used' : 'Reveal private need'}
+                </button>
+              ) : (
+                <span className="tool-button">◌ Rule-based NPC</span>
+              )}
+              <span>
+                {part.controller === 'human'
+                  ? (part.selectedStrategyId ? 'Strategy committed' : 'Choose one strategy')
+                  : (game.phase === 'planning' ? 'Commits after Cognition α' : 'Strategy revealed')}
+              </span>
             </div>
 
             <div className="hand-grid">
-              {part.hand.map((strategy) => {
+              {part.controller === 'human' ? part.hand.map((strategy) => {
                 const legal = strategyCanBePlayed(part, strategy)
                 const selected = part.selectedStrategyId === strategy.id
                 return (
@@ -548,17 +644,38 @@ function App() {
                           </span>
                         ))}
                       </div>
-                      <small>{legal ? 'Can tend this part’s public needs' : 'Select to discard, or trade it to another part'}</small>
+                      <small>{legal ? 'Full value applies to every matching Need' : 'Select to discard, or offer it to an NPC'}</small>
                     </button>
                     {game.phase === 'planning' && (
                       <div className="trade-row">
-                        {game.parts.filter((target) => target.id !== part.id).map((target) => (
+                        {game.parts.filter((target) => target.controller === 'npc').map((target) => (
                           <button key={target.id} onClick={() => tradeStrategy(part.id, strategy.id, target.id)}>
-                            Give to {target.name.replace('The ', '')}
+                            Offer to {target.name}
                           </button>
                         ))}
                       </div>
                     )}
+                  </div>
+                )
+              }) : part.hand.map((strategy, index) => {
+                const revealed = game.phase !== 'planning' && part.selectedStrategyId === strategy.id
+                return (
+                  <div className="strategy-wrap" key={strategy.id}>
+                    <div className={`strategy-card ${revealed ? 'is-selected' : ''}`}>
+                      <span className="card-kicker">{revealed ? strategy.id : `Hidden strategy ${index + 1}`}</span>
+                      <strong>{revealed ? strategy.title : 'Face down'}</strong>
+                      {revealed ? (
+                        <div className="strategy-effects">
+                          {strategy.effects.map((effect) => (
+                            <span key={`${strategy.id}-${effect.need}`} className={effect.amount < 0 ? 'negative' : ''}>
+                              {effect.need} {effect.amount > 0 ? `+${effect.amount}` : effect.amount}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <small>Its contents remain private until the simultaneous reveal.</small>
+                      )}
+                    </div>
                   </div>
                 )
               })}
@@ -569,15 +686,21 @@ function App() {
 
       <footer className="action-dock">
         <div>
-          <strong>{game.phase === 'planning' ? `${selectedCount} of ${game.parts.length} parts ready` : 'Round resolved'}</strong>
+          <strong>
+            {game.phase === 'planning'
+              ? (humanReady ? 'Cognition α is ready' : 'Cognition α needs a Strategy')
+              : 'Round resolved'}
+          </strong>
           <span>
-            {game.phase === 'planning' && 'All choices reveal together.'}
+            {game.phase === 'planning' && 'NPC choices are made only after you commit; all three reveal together.'}
             {game.phase === 'resolved' && 'Refill hands and continue tending this situation.'}
-            {game.phase === 'situation-complete' && 'The whole system can move into a new situation.'}
+            {game.phase === 'situation-complete' && 'The whole psyche can move into a new situation.'}
           </span>
         </div>
         {game.phase === 'planning' && (
-          <button className="primary-button" disabled={!allSelected} onClick={resolveRound}>Reveal the round</button>
+          <button className="primary-button" disabled={!humanReady} onClick={resolveRound}>
+            Commit α and reveal
+          </button>
         )}
         {game.phase === 'resolved' && (
           <button className="primary-button" onClick={continueRound}>Continue this situation</button>
