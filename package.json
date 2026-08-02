@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "assets": "node scripts/restore-card-assets.mjs",
+    "predev": "npm run assets",
     "dev": "vite",
+    "prebuild": "npm run assets",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
