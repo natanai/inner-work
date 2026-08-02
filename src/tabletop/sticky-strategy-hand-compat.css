@@ -1,5 +1,9 @@
 @media (max-width: 760px) {
-  .true-strategy-stack {
+  html[data-strategy-hand='docked'] .true-strategy-stack {
     display: none !important;
+  }
+
+  html[data-strategy-hand='undocked'] .true-strategy-stack {
+    display: grid !important;
   }
 }
