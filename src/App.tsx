@@ -3,6 +3,7 @@ import { CardBack } from './tabletop/Cards'
 import { preloadGameAssets } from './tabletop/cardAssets'
 import { DealScreen } from './tabletop/DealScreen'
 import { MobileDealScreen } from './tabletop/MobileDealScreen'
+import { MobileHandPager } from './tabletop/MobileHandPager'
 import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { PrivateNeedChoiceScreen } from './tabletop/PrivateNeedChoiceScreen'
@@ -122,5 +123,5 @@ export default function App() {
     ? <MobilePlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
     : <PlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
 
-  return <TradeDiscussionLayer game={game} onGameChange={setGame}>{playScreen}</TradeDiscussionLayer>
+  return <TradeDiscussionLayer game={game} onGameChange={setGame}><>{playScreen}<MobileHandPager game={game} /></></TradeDiscussionLayer>
 }
