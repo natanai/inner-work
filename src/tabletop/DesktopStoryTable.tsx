@@ -15,9 +15,9 @@ function MatchList({ line }: { line: Resolution }) {
     <div className="desktop-story-matches">
       {line.publicMatches.length > 0 && <p><span>Shared Public Needs</span><strong>{line.publicMatches.join(' · ')}</strong></p>}
       {line.privateMatches.length > 0 && <p><span>Private Needs</span><strong>{line.privateMatches.length} hidden Need{line.privateMatches.length === 1 ? '' : 's'} also tended</strong></p>}
-      {line.bonusMatches.length > 0 && <p><span>Bonus Needs</span><strong>{line.bonusMatches.join(' · ')}</strong></p>}
-      {line.bonusCreated.length > 0 && <p className="created"><span>Creates for next round</span><strong>{line.bonusCreated.map((bonus) => bonus.need).join(' · ')}</strong></p>}
-      {empty && <p><span>Result</span><strong>This Strategy is discarded.</strong></p>}
+      {line.bonusMatches.length > 0 && <p><span>Bonus Needs already in play</span><strong>{line.bonusMatches.join(' · ')}</strong></p>}
+      {line.bonusCreated.length > 0 && <p className="created"><span>Introduced by this shared action</span><strong>{line.bonusCreated.map((bonus) => `${bonus.need} · available next round`).join(' · ')}</strong></p>}
+      {empty && line.bonusCreated.length === 0 && <p><span>Result</span><strong>This Strategy is discarded.</strong></p>}
     </div>
   )
 }
@@ -28,8 +28,8 @@ function RevealMoment({ game }: { game: GameState }) {
       <div className="desktop-story-situation-ghost"><CardFace kind="situation" id={game.situation.id} /></div>
       <header>
         <span>Simultaneous reveal</span>
-        <h1>Three responses enter the same Situation.</h1>
-        <p>The cards were committed together. Now the table slows down so each Cognition can explain what its Strategy means in lived experience.</p>
+        <h1>Three parts influenced one shared person.</h1>
+        <p>The Strategies were committed together. Now the table slows down to hear what each Cognition brought forward, what the person actually did, and what that shared action tended across the whole psyche.</p>
       </header>
       <div className="desktop-story-reveal-cards">
         {game.resolution.map((line, index) => (
@@ -59,6 +59,9 @@ function StoryMoment({
   onInspectStrategy: (id: string, label: string) => void
 }) {
   const human = line.cognitionId === 'alpha'
+  const [showExample, setShowExample] = useState(false)
+  const introduced = line.bonusCreated.map((bonus) => bonus.need)
+
   return (
     <section className="desktop-story-turn">
       <div className="desktop-story-context">
@@ -71,20 +74,34 @@ function StoryMoment({
       </button>
       <div className="desktop-story-reflection">
         <span>Story {index + 1} of 3 · {line.cognitionName}</span>
-        <h1>What does “{line.strategy.title}” actually look like here?</h1>
-        <p className="desktop-story-theme">A Strategy is not only a matching word. It is something a person could really do to make more room for a Need.</p>
+        <h1>How did this part influence what the whole person did?</h1>
+        <p className="desktop-story-theme">The Cognition brings forward a Need. The Strategy becomes an action performed by the one body and person shared by the entire psyche.</p>
         {human ? (
-          <div className="desktop-story-writing">
-            <label htmlFor="desktop-human-story">Describe a small, believable version of this response.</label>
+          <div className="desktop-story-writing collective-story-writing">
+            <div className="collective-story-cues" aria-label="Story structure">
+              <p><span>1</span><b>Motivation</b><em>What Need did {line.cognitionName} bring forward?</em></p>
+              <p><span>2</span><b>Shared action</b><em>How did the person actually {line.strategy.title.replace(/[.!?]+$/, '').toLowerCase()}?</em></p>
+              <p><span>3</span><b>Wider effect</b><em>What else did it tend{introduced.length ? `, and how did it introduce ${introduced.join(' and ')} as a Bonus Need` : ''}?</em></p>
+            </div>
+            <label htmlFor="desktop-human-story">Tell the story in your own words.</label>
             <textarea
               id="desktop-human-story"
               value={humanStory}
               onChange={(event) => setHumanStory(event.target.value)}
-              placeholder="What might you say, do, notice, ask for, or change in this Situation?"
+              placeholder={`${line.cognitionName} brought forward… The shared person chose to… It also…`}
             />
-            <button className="quiet" onClick={() => setHumanStory(line.story)}>Use the suggested story</button>
+            <div className="collective-story-example-actions">
+              <button className="quiet" onClick={() => setShowExample((visible) => !visible)}>{showExample ? 'Hide example' : 'See an example'}</button>
+            </div>
+            {showExample && (
+              <aside className="collective-story-example">
+                <span>Generated from this exact play</span>
+                <blockquote>{line.story}</blockquote>
+                <button className="quiet" onClick={() => setHumanStory(line.story)}>Use as a starting point</button>
+              </aside>
+            )}
           </div>
-        ) : <blockquote>{line.story}</blockquote>}
+        ) : <blockquote className="collective-story-npc">{line.story}</blockquote>}
         <p className="desktop-story-card-text">{strategyText(line.strategy)}</p>
         <MatchList line={line} />
       </div>
@@ -111,7 +128,7 @@ function RoundSummary({ game }: { game: GameState }) {
           {ledger.bonusAwards.map((award) => <p key={award.bonusId}><span>{award.cognitionNames.join(' & ')} · {award.need}</span><b>+{award.pointsEach} each</b></p>)}
           {ledger.privateAwards.length === 0 && ledger.bonusAwards.length === 0 && <p><span>No individual gifts moved.</span></p>}
         </article>
-        {ledger.bonusCreated.length > 0 && <article><h2>Bonus Needs arriving next round</h2>{ledger.bonusCreated.map((bonus) => <p key={bonus.id}><span>{bonus.need} · from {bonus.sourceStrategyTitle}</span><b><GiftIcon variation={1} />{bonus.gifts}</b></p>)}</article>}
+        {ledger.bonusCreated.length > 0 && <article><h2>Bonus Needs arriving next round</h2>{ledger.bonusCreated.map((bonus) => <p key={bonus.id}><span>{bonus.need} · introduced when {bonus.sourceCognitionName} brought forward {bonus.sourceStrategyTitle}</span><b><GiftIcon variation={1} />{bonus.gifts}</b></p>)}</article>}
       </div>
     </section>
   )
@@ -161,6 +178,7 @@ export function DesktopStoryTable({ game, onContinue, onNextSituation, onInspect
           {step === 0 && <RevealMoment game={game} />}
           {step > 0 && step <= game.resolution.length && (
             <StoryMoment
+              key={game.resolution[step - 1].cognitionId}
               game={game}
               line={game.resolution[step - 1]}
               index={step - 1}
