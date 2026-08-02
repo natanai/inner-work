@@ -5,6 +5,7 @@ import { DealScreen } from './tabletop/DealScreen'
 import { MobileCardExperienceLayer } from './tabletop/MobileCardExperienceLayer'
 import { MobileDealScreen } from './tabletop/MobileDealScreen'
 import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
+import { MobileStoryTable } from './tabletop/MobileStoryTable'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { PrivateNeedChoiceScreen } from './tabletop/PrivateNeedChoiceScreen'
 import { StickyStrategyHand } from './tabletop/StickyStrategyHand'
@@ -120,10 +121,18 @@ export default function App() {
     prepare(nextSituation(game), chooseAgain ? 'private-choice' : 'deal')
   }
   const handleEnd = () => setScreen('end')
+  const mobileStoryActive = phone && game.phase !== 'planning'
 
   const playScreen = phone
-    ? <MobilePlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
+    ? mobileStoryActive
+      ? <MobileStoryTable game={game} onContinue={() => handleChange(game)} onNextSituation={handleNextSituation} />
+      : <MobilePlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
     : <PlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
 
-  return <TradeDiscussionLayer game={game} onGameChange={setGame}><>{playScreen}<MobileCardExperienceLayer game={game} onGameChange={setGame} />{phone && <StickyStrategyHand game={game} onGameChange={setGame} />}<TactileExperienceLayer game={game} /></></TradeDiscussionLayer>
+  return <TradeDiscussionLayer game={game} onGameChange={setGame}><>
+    {playScreen}
+    {!mobileStoryActive && <MobileCardExperienceLayer game={game} onGameChange={setGame} />}
+    {phone && game.phase === 'planning' && <StickyStrategyHand game={game} onGameChange={setGame} />}
+    {!mobileStoryActive && <TactileExperienceLayer game={game} />}
+  </></TradeDiscussionLayer>
 }
