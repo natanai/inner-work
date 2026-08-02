@@ -11,13 +11,25 @@ type InspectedCard = {
   label: string
 }
 
+function resolvedNeedNames(lines: Resolution[]): Set<string> {
+  return new Set(
+    lines
+      .filter((line) => line.legal)
+      .flatMap((line) => line.strategy.effects)
+      .filter((effect) => effect.amount > 0)
+      .map((effect) => effect.need),
+  )
+}
+
 function NpcSeat({
   cognition,
   resolution,
+  tendedNeeds,
   onInspect,
 }: {
   cognition: Cognition
   resolution?: Resolution
+  tendedNeeds: Set<string>
   onInspect: (card: InspectedCard) => void
 }) {
   return (
@@ -28,6 +40,7 @@ function NpcSeat({
           <NeedCardOnTable
             key={slot.card.id}
             slot={slot}
+            highlighted={tendedNeeds.has(slot.card.need)}
             onInspect={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}` })}
           />
         ))}
@@ -76,12 +89,14 @@ function Reveal({
 function PlayerSeat({
   cognition,
   phase,
+  tendedNeeds,
   onSelect,
   onRevealPrivate,
   onInspect,
 }: {
   cognition: Cognition
   phase: GameState['phase']
+  tendedNeeds: Set<string>
   onSelect: (id: string) => void
   onRevealPrivate: () => void
   onInspect: (card: InspectedCard) => void
@@ -98,6 +113,7 @@ function PlayerSeat({
                 key={slot.card.id}
                 slot={slot}
                 large
+                highlighted={tendedNeeds.has(slot.card.need)}
                 onInspect={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}` })}
               />
             ))}
@@ -110,6 +126,7 @@ function PlayerSeat({
               <NeedCardOnTable
                 slot={cognition.privateNeed}
                 large
+                highlighted={tendedNeeds.has(cognition.privateNeed.card.need)}
                 onInspect={() => onInspect({ kind: 'need', id: cognition.privateNeed.card.id, label: `${cognition.privateNeed.card.feeling}: ${cognition.privateNeed.card.need}` })}
               />
             ) : <CardBack kind="need" className="large-private" />}
@@ -156,6 +173,7 @@ export function PlayScreen({
   const gamma = game.cognitions[2]
   const betaResult = game.resolution.find((line) => line.cognitionId === 'beta')
   const gammaResult = game.resolution.find((line) => line.cognitionId === 'gamma')
+  const tendedNeeds = resolvedNeedNames(game.resolution)
 
   return (
     <main className="play-page">
@@ -164,7 +182,7 @@ export function PlayScreen({
         <div><b>{game.sharedScore} shared gifts</b><b>Round {game.round}</b><button onClick={onEnd}>End day</button></div>
       </header>
       <section className="game-table">
-        <NpcSeat cognition={beta} resolution={betaResult} onInspect={setInspected} />
+        <NpcSeat cognition={beta} resolution={betaResult} tendedNeeds={tendedNeeds} onInspect={setInspected} />
         <section className="center-table">
           <div className="deck-row"><Deck kind="situation" count={game.situationDeck.length} /><Deck kind="need" count={game.needDeck.length} /><Deck kind="strategy" count={game.strategyDeck.length} /></div>
           <button
@@ -178,10 +196,11 @@ export function PlayScreen({
             <div className="turn-prompt"><b>1</b><p><strong>Choose one Strategy.</strong><span>Cognitions β and γ choose in secret. All three cards reveal together.</span></p></div>
           ) : <Reveal lines={game.resolution} onInspect={setInspected} />}
         </section>
-        <NpcSeat cognition={gamma} resolution={gammaResult} onInspect={setInspected} />
+        <NpcSeat cognition={gamma} resolution={gammaResult} tendedNeeds={tendedNeeds} onInspect={setInspected} />
         <PlayerSeat
           cognition={alpha}
           phase={game.phase}
+          tendedNeeds={tendedNeeds}
           onSelect={(id) => onChange({ ...game, cognitions: game.cognitions.map((cognition) => cognition.id === 'alpha' ? { ...cognition, selected: cognition.selected === id ? null : id } : cognition) })}
           onRevealPrivate={() => onChange({ ...game, cognitions: game.cognitions.map((cognition) => cognition.id === 'alpha' ? { ...cognition, privateVisible: true, magnifierUsed: true } : cognition) })}
           onInspect={setInspected}
