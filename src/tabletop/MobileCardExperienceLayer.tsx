@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { createPortal } from 'react-dom'
 import type { StrategyCard } from '../data/cards'
 import { CardFace, GiftIcon, strategyText, type CardKind } from './Cards'
-import { canPlay, type Cognition, type GameState } from './model'
+import { canPlay, type Cognition, type GameState, type NeedSlot } from './model'
 
 type InspectedCard = {
   kind: CardKind
@@ -16,6 +16,13 @@ type PortalTargets = {
   needs: HTMLElement[]
 }
 
+type GestureAxis = 'pending' | 'horizontal' | 'vertical'
+
+type PointerStart = {
+  x: number
+  y: number
+}
+
 function cognitionSymbol(cognition: Cognition): string {
   if (cognition.id === 'alpha') return 'α'
   if (cognition.id === 'beta') return 'β'
@@ -24,6 +31,17 @@ function cognitionSymbol(cognition: Cognition): string {
 
 function activeBonuses(game: GameState) {
   return game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round)
+}
+
+function giftOriginText(slot: NeedSlot): string {
+  const parts = [`Base ${slot.setup.base}`]
+  if (slot.setup.situation > 0) parts.push(`Situation +${slot.setup.situation}`)
+  if (slot.setup.multiplied) parts.push(`${slot.card.feeling} ×2`)
+  return parts.join(' · ')
+}
+
+function giftDetailText(slot: NeedSlot): string {
+  return `${giftOriginText(slot)}. Started with ${slot.setup.total}; ${slot.gifts} required gift${slot.gifts === 1 ? '' : 's'} remain.`
 }
 
 function sameTargets(previous: PortalTargets, next: PortalTargets): boolean {
@@ -90,8 +108,9 @@ function StrategyStack({
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [animating, setAnimating] = useState(false)
-  const pointerStart = useRef<number | null>(null)
+  const pointerStart = useRef<PointerStart | null>(null)
   const pointerId = useRef<number | null>(null)
+  const gestureAxis = useRef<GestureAxis>('pending')
   const moved = useRef(false)
   const animationTimer = useRef<number | null>(null)
 
@@ -101,6 +120,9 @@ function StrategyStack({
     setDragX(0)
     setDragging(false)
     setAnimating(false)
+    pointerStart.current = null
+    pointerId.current = null
+    gestureAxis.current = 'pending'
   }, [handKey])
 
   useEffect(() => () => {
@@ -120,30 +142,68 @@ function StrategyStack({
     }, 190)
   }
 
+  const resetPointer = () => {
+    pointerStart.current = null
+    pointerId.current = null
+    gestureAxis.current = 'pending'
+    setDragging(false)
+  }
+
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (animating) return
-    pointerStart.current = event.clientX
+    pointerStart.current = { x: event.clientX, y: event.clientY }
     pointerId.current = event.pointerId
+    gestureAxis.current = 'pending'
     moved.current = false
-    setDragging(true)
-    event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (pointerStart.current === null || pointerId.current !== event.pointerId || animating) return
-    const distance = event.clientX - pointerStart.current
-    if (Math.abs(distance) > 7) moved.current = true
-    setDragX(Math.max(-150, Math.min(150, distance)))
+    const start = pointerStart.current
+    if (!start || pointerId.current !== event.pointerId || animating) return
+
+    const distanceX = event.clientX - start.x
+    const distanceY = event.clientY - start.y
+    const horizontalDistance = Math.abs(distanceX)
+    const verticalDistance = Math.abs(distanceY)
+
+    if (gestureAxis.current === 'pending' && Math.max(horizontalDistance, verticalDistance) >= 9) {
+      if (verticalDistance > horizontalDistance * 1.15) {
+        gestureAxis.current = 'vertical'
+        moved.current = true
+        setDragX(0)
+        setDragging(false)
+        return
+      }
+      if (horizontalDistance > verticalDistance * 1.15) {
+        gestureAxis.current = 'horizontal'
+        moved.current = true
+        setDragging(true)
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.setPointerCapture(event.pointerId)
+        }
+      }
+    }
+
+    if (gestureAxis.current !== 'horizontal') return
+    event.preventDefault()
+    setDragX(Math.max(-150, Math.min(150, distanceX)))
   }
 
   const finishPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (pointerStart.current === null || pointerId.current !== event.pointerId) return
-    const distance = event.clientX - pointerStart.current
-    pointerStart.current = null
-    pointerId.current = null
-    setDragging(false)
-    if (Math.abs(distance) >= 48) cycle(distance < 0 ? 1 : -1)
+    const start = pointerStart.current
+    if (!start || pointerId.current !== event.pointerId) return
+
+    const distanceX = event.clientX - start.x
+    const horizontalGesture = gestureAxis.current === 'horizontal'
+    resetPointer()
+
+    if (horizontalGesture && Math.abs(distanceX) >= 48) cycle(distanceX < 0 ? 1 : -1)
     else setDragX(0)
+  }
+
+  const cancelPointer = () => {
+    resetPointer()
+    setDragX(0)
   }
 
   const select = (card: StrategyCard) => {
@@ -159,7 +219,7 @@ function StrategyStack({
     <section className="true-strategy-stack" aria-label="Your Strategy hand">
       <header>
         <div><span>Your response</span><strong>Choose one Strategy for these Needs</strong></div>
-        <small>Swipe the front card</small>
+        <small>Swipe sideways</small>
       </header>
 
       <div
@@ -167,7 +227,7 @@ function StrategyStack({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={finishPointer}
-        onPointerCancel={finishPointer}
+        onPointerCancel={cancelPointer}
       >
         {cards.map((card, cardIndex) => {
           const offset = wrap(cardIndex - activeIndex, cards.length)
@@ -200,11 +260,10 @@ function StrategyStack({
                   if (moved.current) return
                   onInspect({ kind: 'strategy', id: card.id, label: card.title, detail: strategyText(card) })
                 }}
-                aria-label={`Read ${card.title} full-size`}
+                aria-label={`Enlarge ${card.title}`}
                 tabIndex={active ? 0 : -1}
               >
                 <CardFace kind="strategy" id={card.id} />
-                <span>Read full-size</span>
               </button>
               <div className="true-stack-copy">
                 <span className={legal ? 'mobile-playable' : 'mobile-discard'}>{legal ? 'Tends your Public or a Bonus Need' : 'Discard only'}</span>
@@ -224,7 +283,6 @@ function StrategyStack({
         <span><b>{cards.length ? activeIndex + 1 : 0}</b> of {cards.length}</span>
         <button onClick={() => cycle(1)} aria-label="Move front Strategy to the back">→</button>
       </nav>
-      <p className="true-stack-instruction">Swipe left to move the front card to the back of the hand.</p>
     </section>
   )
 }
@@ -238,7 +296,7 @@ function NeedGalleryRow({
 }) {
   return (
     <section className={`true-need-gallery-row true-need-owner-${cognition.id}`}>
-      <header><span>Public Need artwork</span><strong>Tap a card to see it full-size</strong></header>
+      <header><span>Public Need cards</span></header>
       <div>
         {cognition.publicNeeds.map((slot) => (
           <button
@@ -248,13 +306,14 @@ function NeedGalleryRow({
               kind: 'need',
               id: slot.card.id,
               label: `${slot.card.feeling}: ${slot.card.need}`,
-              detail: `${slot.gifts} required gift${slot.gifts === 1 ? '' : 's'} remain.`,
+              detail: giftDetailText(slot),
             })}
           >
             <span className="true-need-owner-badge">{cognitionSymbol(cognition)}</span>
             <CardFace kind="need" id={slot.card.id} />
             <span className="true-need-gift-badge"><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} /><b>{slot.gifts}</b></span>
             <span className="true-need-caption"><small>{slot.card.feeling}</small><strong>{slot.card.need}</strong></span>
+            <span className="true-need-origin"><small>{giftOriginText(slot)}</small><strong>{slot.gifts}/{slot.setup.total} left</strong></span>
           </button>
         ))}
       </div>
@@ -268,7 +327,7 @@ function CardInspector({ inspected, onClose }: { inspected: InspectedCard; onClo
       <div className={`mobile-dialog-inner mobile-dialog-${inspected.kind}`} onClick={(event) => event.stopPropagation()}>
         <button className="mobile-dialog-close" onClick={onClose} aria-label="Close card">×</button>
         <div className="mobile-dialog-image"><CardFace kind={inspected.kind} id={inspected.id} /></div>
-        <section><h2>{inspected.label}</h2>{inspected.detail && <p>{inspected.detail}</p>}<button className="primary" onClick={onClose}>Return</button></section>
+        <section><h2>{inspected.label}</h2>{inspected.detail && <p>{inspected.detail}</p>}</section>
       </div>
     </dialog>
   )

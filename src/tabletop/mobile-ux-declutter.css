@@ -1,0 +1,39 @@
+.planning-label-mobile{display:none}
+
+@media(max-width:760px){
+  .planning-label-desktop{display:none!important}
+  .planning-label-mobile{display:inline!important}
+
+  /* Keep one compact planning entry point on the table. The magnifier now lives inside it. */
+  .magnifier-launch{display:none!important}
+  .discussion-launch{left:10px!important;right:auto!important;bottom:calc(94px + env(safe-area-inset-bottom))!important;display:flex!important;align-items:center!important;gap:8px!important;width:auto!important;min-width:0!important;min-height:46px!important;padding:8px 10px 8px 13px!important;border-radius:15px!important}
+  .discussion-launch>span:first-child{display:none!important}
+  .discussion-launch strong{font-size:.72rem!important;line-height:1!important}
+  .discussion-launch>b{display:grid!important;place-items:center!important;width:28px!important;height:28px!important;min-width:28px!important;border-radius:50%!important;font-size:.72rem!important}
+  .discussion-layer:has(.mobile-action-dock .primary:not(:disabled)) .discussion-launch{bottom:calc(203px + env(safe-area-inset-bottom))!important}
+
+  /* The disabled reveal bar adds no function before a card is chosen. */
+  .mobile-action-dock:has(.primary:disabled){display:none!important}
+
+  /* Card faces are already established as tappable; remove explanatory overlays. */
+  .mobile-situation-card>span,
+  .mobile-card-preview>span,
+  .true-stack-preview>span,
+  .true-stack-instruction{display:none!important}
+
+  /* A single close control is sufficient in card and Need previews. */
+  .true-card-inspector .mobile-dialog-inner>section>.primary,
+  .mobile-detail-sheet>div>.quiet{display:none!important}
+  .true-card-inspector .mobile-dialog-inner>section{padding-bottom:18px!important}
+
+  /* Show the full gift calculation directly with each Public Need card. */
+  .true-need-origin{display:flex;justify-content:space-between;align-items:flex-start;gap:7px;padding:7px 9px 9px;border-top:1px solid rgba(76,43,29,.14);background:#f4e7ca;color:#75503c;text-align:left}
+  .true-need-origin small{max-width:72%;font-size:.5rem;line-height:1.25}
+  .true-need-origin strong{flex:0 0 auto;font-size:.55rem;white-space:nowrap}
+  .true-need-gallery-row>header{justify-content:flex-start!important}
+
+  .private-goal-review{margin-top:12px;padding:10px 13px;border:1px solid rgba(79,43,29,.28);border-radius:12px;background:#f0c857;color:#4a2b1f;font-weight:850}
+
+  /* Preserve vertical page scrolling through the deck; horizontal movement is handled in code. */
+  .true-stack-deck{touch-action:pan-y!important}
+}
