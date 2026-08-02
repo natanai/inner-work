@@ -10,6 +10,7 @@ import './tabletop/mobile.css'
 import './tabletop/mobile-polish.css'
 import './tabletop/situation-needs-flow.css'
 import './tabletop/trading.css'
+import './tabletop/private-choice-hand-stack.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
