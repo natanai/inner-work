@@ -65,10 +65,10 @@ function LoadingScreen({ game, onReady }: { game: GameState; onReady: () => void
 }
 
 function DayEnd({ game, onAgain, onHome }: { game: GameState; onAgain: () => void; onHome: () => void }) {
-  const scores = game.cognitions.map((cognition) => cognition.privateScore)
+  const scores = game.cognitions.map((cognition) => cognition.privateScore + cognition.bonusScore)
   const highest = Math.max(...scores)
   const balance = highest === 0 ? 100 : Math.round((Math.min(...scores) / highest) * 100)
-  return <main className="end-page"><section><span>The table is cleared</span><h1>What did the whole psyche receive?</h1><div className="end-scores"><article><b>{game.sharedScore}</b><span>shared gifts</span></article><article><b>{game.situationNumber}</b><span>situations</span></article><article><b>{balance}%</b><span>balance</span></article></div><div className="cognition-scores">{game.cognitions.map((cognition) => <p key={cognition.id}><span>{cognition.name}</span><b>{cognition.privateScore} private</b></p>)}</div><div><button className="primary" onClick={onAgain}>Play another day</button><button className="quiet" onClick={onHome}>Home</button></div></section></main>
+  return <main className="end-page"><section><span>The table is cleared</span><h1>What did the whole psyche receive?</h1><div className="end-scores"><article><b>{game.sharedScore}</b><span>shared gifts</span></article><article><b>{game.situationNumber}</b><span>situations</span></article><article><b>{balance}%</b><span>balance</span></article></div><div className="cognition-scores">{game.cognitions.map((cognition) => <p key={cognition.id}><span>{cognition.name}</span><b>{cognition.privateScore + cognition.bonusScore} individual</b></p>)}</div><div><button className="primary" onClick={onAgain}>Play another day</button><button className="quiet" onClick={onHome}>Home</button></div></section></main>
 }
 
 type Screen = 'home' | 'loading' | 'deal' | 'play' | 'end'

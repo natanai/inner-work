@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { StrategyCard } from '../data/cards'
-import type { Cognition, GameState, Resolution } from './model'
+import type { BonusNeed, Cognition, GameState, Resolution } from './model'
 import { canPlay } from './model'
 import { CardBack, CardFace, Magnifier, NeedCardOnTable, type CardKind } from './Cards'
 import { Deck } from './DealScreen'
@@ -34,7 +34,7 @@ function NpcSeat({
 }) {
   return (
     <section className={`npc-seat npc-${cognition.id}`}>
-      <header><span>NPC</span><strong>{cognition.name}</strong><b>{cognition.privateScore} private</b></header>
+      <header><span>NPC</span><strong>{cognition.name}</strong><b>{cognition.privateScore + cognition.bonusScore} individual</b></header>
       <div className="npc-needs">
         {cognition.publicNeeds.map((slot) => (
           <NeedCardOnTable
@@ -89,6 +89,7 @@ function Reveal({
 function PlayerSeat({
   cognition,
   phase,
+  bonusNeeds,
   tendedNeeds,
   onSelect,
   onRevealPrivate,
@@ -96,6 +97,7 @@ function PlayerSeat({
 }: {
   cognition: Cognition
   phase: GameState['phase']
+  bonusNeeds: BonusNeed[]
   tendedNeeds: Set<string>
   onSelect: (id: string) => void
   onRevealPrivate: () => void
@@ -103,7 +105,7 @@ function PlayerSeat({
 }) {
   return (
     <section className="player-seat">
-      <header className="player-title"><div><span>You are</span><h2>{cognition.name}</h2></div><b>{cognition.privateScore} private points</b></header>
+      <header className="player-title"><div><span>You are</span><h2>{cognition.name}</h2></div><b>{cognition.privateScore + cognition.bonusScore} individual points</b></header>
       <div className="player-needs">
         <div>
           <span className="caption">Your Public Needs</span>
@@ -135,11 +137,11 @@ function PlayerSeat({
         </div>
       </div>
       <div className="hand-area">
-        <header><div><span className="caption">Your Strategy hand</span><strong>Choose one card</strong></div><small>Choose the card to play. Use “View” to enlarge it.</small></header>
+        <header><div><span className="caption">Your Strategy hand</span><strong>Choose one card</strong></div><small>A Strategy may tend your Public Needs or any active Bonus Need.</small></header>
         <div className="player-hand">
           {cognition.hand.map((card: StrategyCard) => {
             const selected = card.id === cognition.selected
-            const legal = canPlay(cognition, card)
+            const legal = canPlay(cognition, card, bonusNeeds)
             return (
               <div className={`hand-card ${selected ? 'selected' : ''}`} key={card.id}>
                 <button className="card-choice" disabled={phase !== 'planning'} onClick={() => onSelect(card.id)} aria-pressed={selected}>
@@ -174,6 +176,7 @@ export function PlayScreen({
   const betaResult = game.resolution.find((line) => line.cognitionId === 'beta')
   const gammaResult = game.resolution.find((line) => line.cognitionId === 'gamma')
   const tendedNeeds = resolvedNeedNames(game.resolution)
+  const activeBonusNeeds = game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round)
 
   return (
     <main className="play-page">
@@ -192,6 +195,7 @@ export function PlayScreen({
           >
             <CardFace kind="situation" id={game.situation.id} className="center-situation" />
           </button>
+          {activeBonusNeeds.length > 0 && <p className="turn-prompt"><strong>{activeBonusNeeds.length} active Bonus Need{activeBonusNeeds.length === 1 ? '' : 's'}</strong><span>{activeBonusNeeds.map((bonus) => bonus.need).join(' · ')}</span></p>}
           {game.phase === 'planning' ? (
             <div className="turn-prompt"><b>1</b><p><strong>Choose one Strategy.</strong><span>Cognitions β and γ choose in secret. All three cards reveal together.</span></p></div>
           ) : <Reveal lines={game.resolution} onInspect={setInspected} />}
@@ -200,6 +204,7 @@ export function PlayScreen({
         <PlayerSeat
           cognition={alpha}
           phase={game.phase}
+          bonusNeeds={activeBonusNeeds}
           tendedNeeds={tendedNeeds}
           onSelect={(id) => onChange({ ...game, cognitions: game.cognitions.map((cognition) => cognition.id === 'alpha' ? { ...cognition, selected: cognition.selected === id ? null : id } : cognition) })}
           onRevealPrivate={() => onChange({ ...game, cognitions: game.cognitions.map((cognition) => cognition.id === 'alpha' ? { ...cognition, privateVisible: true, magnifierUsed: true } : cognition) })}
