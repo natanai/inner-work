@@ -1,1 +1,298 @@
-/mnt/data/iw_patch/src/card-fronts.css
+/* High-resolution physical card fronts and compact tabletop layout. */
+.physical-card {
+  display: block;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(51, 35, 24, 0.34);
+  border-radius: 10px;
+  background-color: #fffaf0;
+  box-shadow: 0 5px 12px rgba(59, 25, 12, 0.22);
+}
+
+.full-card-front {
+  background-repeat: no-repeat;
+  image-rendering: auto;
+}
+
+.strategy-face,
+.need-face,
+.card-back {
+  width: 100%;
+  aspect-ratio: 5 / 7;
+}
+
+.situation-face {
+  width: 100%;
+  aspect-ratio: 7 / 5;
+}
+
+.card-back img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.inspectable-card {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.inspectable-card:focus-visible {
+  outline: 3px solid #f1c74b;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.deck .physical-card { width: 72px; }
+.deck span { pointer-events: none; }
+
+.center-situation {
+  width: min(410px, 100%);
+}
+
+.situation-inspect {
+  width: min(410px, 100%);
+  margin-inline: auto;
+}
+
+.npc-needs .need-with-gifts,
+.npc-needs .private-back {
+  width: clamp(76px, 7vw, 104px);
+}
+
+.npc-needs .physical-card { width: 100%; }
+.npc-hand .physical-card { width: clamp(68px, 6vw, 90px); }
+
+.large-needs .need-with-gifts,
+.private-station .need-with-gifts,
+.private-station > .card-back {
+  width: clamp(100px, 9vw, 132px);
+}
+
+.large-needs .physical-card,
+.private-station .physical-card { width: 100%; }
+
+.player-hand {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 10px 4px 18px;
+  scrollbar-width: thin;
+}
+
+.hand-card {
+  position: relative;
+  flex: 0 0 clamp(132px, 12vw, 172px);
+}
+
+.card-choice {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.card-choice .physical-card {
+  width: 100%;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.card-choice:hover:not(:disabled) .physical-card {
+  transform: translateY(-6px);
+  box-shadow: 0 13px 24px rgba(54, 24, 12, 0.34);
+}
+
+.hand-card.selected .physical-card {
+  outline: 5px solid #f2c84b;
+  outline-offset: 2px;
+  transform: translateY(-7px);
+}
+
+.card-choice > span:last-child {
+  display: inline-flex;
+  margin-top: 8px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.card-choice .playable { background: #dcead3; color: #294a25; }
+.card-choice .discard { background: #ead8d2; color: #6d3026; }
+
+.inspect {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  border: 1px solid rgba(35, 22, 15, 0.28);
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: rgba(255, 253, 244, 0.94);
+  color: #3d2418;
+  font-size: 0.67rem;
+  font-weight: 800;
+  cursor: zoom-in;
+  box-shadow: 0 3px 8px rgba(50, 24, 12, 0.2);
+}
+
+.revealed-row .inspectable-card,
+.revealed-row .physical-card {
+  width: clamp(120px, 11vw, 158px);
+}
+
+.need-with-gifts { position: relative; }
+.need-with-gifts.tended .physical-card { opacity: 0.58; filter: saturate(0.55); }
+
+.gift-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  min-height: 22px;
+  margin-top: 4px;
+}
+
+.gift-piece { width: 18px; height: 18px; overflow: visible; }
+.gift-piece .gift-box { fill: #bd241e; }
+.gift-piece .gift-lid { fill: #d83a2f; }
+.gift-piece .gift-ribbon,
+.gift-piece .gift-bow { fill: #f1c530; }
+.gift-piece-1 .gift-box { fill: #18623b; }
+.gift-piece-1 .gift-lid { fill: #247a4a; }
+.gift-piece-2 .gift-box { fill: #b22c25; }
+.gift-piece-2 .gift-lid { fill: #cf453c; }
+.tended-label { display: block; margin-top: 4px; text-align: center; font-size: 0.72rem; font-weight: 800; color: #335d38; }
+
+.magnifier {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 72px;
+  border: 0;
+  background: transparent;
+  color: #4a2a1c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.magnifier svg { width: 62px; height: 62px; overflow: visible; }
+.magnifier-lens { fill: rgba(255, 236, 73, 0.28); stroke: #efb71e; stroke-width: 8; }
+.magnifier-shine { fill: rgba(255, 255, 255, 0.5); }
+.magnifier-handle { fill: none; stroke: #efb71e; stroke-width: 10; stroke-linecap: round; }
+.magnifier.used { opacity: 0.45; }
+.magnifier:disabled { cursor: default; }
+
+/* Keep the player hand and needs visible together rather than hiding the hand below the fold. */
+.player-seat {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.8fr) minmax(500px, 1.45fr);
+  grid-template-areas:
+    "title title"
+    "needs hand";
+  gap: 12px 26px;
+  align-items: start;
+}
+
+.player-title { grid-area: title; }
+.player-needs { grid-area: needs; align-items: flex-start; }
+.hand-area { grid-area: hand; min-width: 0; }
+.hand-area > header { margin-bottom: 4px; }
+
+.play-page { padding-bottom: 24px; }
+.game-table { align-items: start; }
+
+.action-bar {
+  position: sticky !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: 10px !important;
+  transform: none !important;
+  width: min(900px, calc(100% - 28px)) !important;
+  margin: 14px auto 0 !important;
+  z-index: 40;
+}
+
+.card-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  max-height: none;
+  margin: 0;
+  padding: 22px;
+  border: 0;
+  background: rgba(35, 16, 10, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.card-dialog-inner {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: 94vw;
+  max-height: calc(100vh - 44px);
+}
+
+.dialog-close {
+  position: absolute;
+  z-index: 2;
+  top: -14px;
+  right: -14px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #fffaf0;
+  color: #3c2117;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.35);
+}
+
+.card-dialog .zoom-strategy .zoomed-card,
+.card-dialog .zoom-need .zoomed-card {
+  width: min(450px, 86vw, calc((100vh - 60px) * 5 / 7));
+}
+
+.card-dialog .zoom-situation .zoomed-card {
+  width: min(840px, 92vw, calc((100vh - 60px) * 7 / 5));
+}
+
+@media (max-width: 1040px) {
+  .player-seat {
+    grid-template-columns: 1fr;
+    grid-template-areas: "title" "hand" "needs";
+  }
+  .player-hand { justify-content: flex-start; }
+}
+
+@media (max-width: 760px) {
+  .center-situation,
+  .situation-inspect { width: 100%; }
+  .player-needs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .hand-card { flex-basis: 146px; }
+  .action-bar { bottom: 4px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-choice .physical-card { transition: none; }
+}
