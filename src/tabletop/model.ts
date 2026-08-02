@@ -266,6 +266,11 @@ function needPhrase(needsToName: string[]): string {
   return values.length === 1 ? `the need for ${values[0]}` : `the needs for ${joinNatural(values)}`
 }
 
+function ownedNeedPhrase(needsToName: string[]): string {
+  const values = unique(needsToName)
+  return values.length === 1 ? `need for ${values[0]}` : `needs for ${joinNatural(values)}`
+}
+
 function actionPhrase(title: string): string {
   const cleaned = title.replace(/[.!?]+$/, '')
   return cleaned ? cleaned[0].toLowerCase() + cleaned.slice(1) : title
@@ -300,14 +305,14 @@ function collectiveStory(
   const motivation = ownPublic.length > 0
     ? `${actor.name} brought forward ${needPhrase(ownPublic)}`
     : matchedBonuses.length > 0
-      ? `${actor.name} recognized ${needPhrase(matchedBonuses.map((bonus) => bonus.need))} in the active Bonus Needs`
+      ? `${actor.name} recognized ${matchedBonuses.length === 1 ? 'the active Bonus Need' : 'the active Bonus Needs'} for ${joinNatural(matchedBonuses.map((bonus) => bonus.need))}`
       : `${actor.name} brought forward this Strategy`
 
   const opening = `${motivation}. That influenced the whole psyche to choose a shared action: the person chose to ${actionPhrase(strategy.title)} during “${situation.title}.”`
   const consequences: string[] = []
 
   for (const [cognitionName, needsTended] of otherPublic) {
-    consequences.push(`It also tended ${cognitionName}’s ${needPhrase(needsTended)}`)
+    consequences.push(`It also tended ${cognitionName}’s ${ownedNeedPhrase(needsTended)}`)
   }
 
   if (privateOwners.length > 0) {
@@ -321,7 +326,7 @@ function collectiveStory(
 
   if (bonusCreated.length > 0) {
     const created = joinNatural(bonusCreated.map((bonus) => bonus.need))
-    consequences.push(`This shared action also introduced ${bonusCreated.length === 1 ? 'a new Bonus Need' : 'new Bonus Needs'} for ${created}, which ${bonusCreated.length === 1 ? 'will' : 'will'} enter play next round`)
+    consequences.push(`This shared action also introduced ${bonusCreated.length === 1 ? 'a new Bonus Need' : 'new Bonus Needs'} for ${created}, which will enter play next round`)
   }
 
   return `${opening}${consequences.length ? ` ${consequences.join('. ')}.` : ''}`
