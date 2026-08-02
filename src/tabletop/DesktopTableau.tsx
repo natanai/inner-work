@@ -134,10 +134,13 @@ export function DesktopPlayerHand({ game, onSelect, onInspect }: {
 }) {
   const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
   const activeBonuses = game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round)
+  const openPlanning = () => document.querySelector<HTMLButtonElement>('.discussion-launch')?.click()
   return (
     <section className="desktop-response-stage">
       <header><div><span>Your response</span><h2>Choose one Strategy that you can actually use here.</h2></div><p>A legal card must tend one of α’s Public Needs or an active Bonus Need. Its other effects may help anyone.</p></header>
-      <div className="desktop-planning-tools-target" />
+      <div className="desktop-planning-tools-target">
+        <button className="desktop-planning-launch" onClick={openPlanning}><span>Before choosing</span><strong>Plan, discuss, and trade</strong><b>Open planning tools</b></button>
+      </div>
       <div className="desktop-player-hand">
         {player.hand.map((card: StrategyCard) => {
           const legal = canPlay(player, card, activeBonuses)
