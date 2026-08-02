@@ -2,8 +2,28 @@ import { useEffect, useMemo, useState } from 'react'
 import { CardBack } from './tabletop/Cards'
 import { preloadGameAssets } from './tabletop/cardAssets'
 import { DealScreen } from './tabletop/DealScreen'
+import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { continueRound, createGame, nextSituation, resolveRound, type GameState } from './tabletop/model'
+
+function usePhoneLayout(): boolean {
+  const query = '(max-width: 760px)'
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches)
+
+  useEffect(() => {
+    const media = window.matchMedia(query)
+    const update = () => setPhone(media.matches)
+    update()
+    if (media.addEventListener) media.addEventListener('change', update)
+    else media.addListener(update)
+    return () => {
+      if (media.removeEventListener) media.removeEventListener('change', update)
+      else media.removeListener(update)
+    }
+  }, [])
+
+  return phone
+}
 
 function Home({ onStart }: { onStart: () => void }) {
   const [rules, setRules] = useState(false)
@@ -57,6 +77,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [readyScreen, setReadyScreen] = useState<ReadyScreen>('deal')
   const [game, setGame] = useState<GameState | null>(null)
+  const phone = usePhoneLayout()
 
   const prepare = (nextGame: GameState, destination: ReadyScreen) => {
     setGame(nextGame)
@@ -70,7 +91,7 @@ export default function App() {
   if (screen === 'deal') return <DealScreen game={game} onDone={() => setScreen('play')} />
   if (screen === 'end') return <DayEnd game={game} onAgain={start} onHome={() => setScreen('home')} />
 
-  return <PlayScreen game={game} onChange={(next) => {
+  const handleChange = (next: GameState) => {
     if (next !== game) {
       setGame(next)
       return
@@ -80,5 +101,11 @@ export default function App() {
       return
     }
     prepare(continueRound(game), 'play')
-  }} onNextSituation={() => prepare(nextSituation(game), 'deal')} onEnd={() => setScreen('end')} />
+  }
+  const handleNextSituation = () => prepare(nextSituation(game), 'deal')
+  const handleEnd = () => setScreen('end')
+
+  return phone
+    ? <MobilePlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
+    : <PlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
 }

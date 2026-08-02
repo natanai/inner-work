@@ -56,7 +56,7 @@ export function CardBack({
   )
 }
 
-function GiftIcon({ variation }: { variation: number }) {
+export function GiftIcon({ variation = 0 }: { variation?: number }) {
   return (
     <svg className={`gift-piece gift-piece-${variation % 3}`} viewBox="0 0 32 32" aria-hidden="true">
       <path className="gift-lid" d="M3 11h26v6H3z" />
@@ -80,15 +80,17 @@ export function GiftPieces({ count }: { count: number }) {
 export function NeedCardOnTable({
   slot,
   large = false,
+  highlighted = false,
   onInspect,
 }: {
   slot: NeedSlot
   large?: boolean
+  highlighted?: boolean
   onInspect?: () => void
 }) {
   const card = <CardFace kind="need" id={slot.card.id} />
   return (
-    <div className={`need-with-gifts ${large ? 'large' : ''} ${slot.gifts === 0 ? 'tended' : ''}`}>
+    <div className={`need-with-gifts ${large ? 'large' : ''} ${slot.gifts === 0 ? 'tended' : ''} ${highlighted ? 'gift-resolved' : ''}`}>
       {onInspect ? (
         <button className="inspectable-card" onClick={onInspect} aria-label={`Enlarge ${slot.card.feeling}: ${slot.card.need}`}>
           {card}
@@ -96,6 +98,12 @@ export function NeedCardOnTable({
       ) : card}
       <div className="card-readable-label"><span>{slot.card.feeling}</span><strong>{slot.card.need}</strong></div>
       <GiftPieces count={slot.gifts} />
+      {highlighted && (
+        <div className="gift-impact" aria-label={`${slot.card.need} was tended this round`}>
+          <GiftIcon variation={1} />
+          <span>Tended this round</span>
+        </div>
+      )}
     </div>
   )
 }
