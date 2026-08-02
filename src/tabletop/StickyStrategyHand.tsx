@@ -1,13 +1,25 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { StrategyCard } from '../data/cards'
 import { CardFace, strategyText } from './Cards'
 import { canPlay, type GameState } from './model'
 
 type GestureAxis = 'pending' | 'horizontal' | 'vertical'
+type HandMode = 'docked' | 'undocked'
+
+const HAND_MODE_KEY = 'inner-work:strategy-hand-mode'
 
 function wrap(index: number, total: number): number {
   if (total === 0) return 0
   return (index + total) % total
+}
+
+function readHandMode(): HandMode {
+  try {
+    return window.localStorage.getItem(HAND_MODE_KEY) === 'undocked' ? 'undocked' : 'docked'
+  } catch {
+    return 'docked'
+  }
 }
 
 function usePlayTabActive(): boolean {
@@ -24,25 +36,55 @@ function usePlayTabActive(): boolean {
   return active
 }
 
+function useHandTarget(): HTMLElement | null {
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const refresh = () => setTarget(document.querySelector<HTMLElement>('.mobile-hand-section'))
+    refresh()
+    const observer = new MutationObserver(refresh)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
+
+  return target
+}
+
 export function StickyStrategyHand({ game, onGameChange }: { game: GameState; onGameChange: (game: GameState) => void }) {
   const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
   const cards = player.hand
   const playActive = usePlayTabActive()
+  const handTarget = useHandTarget()
   const selectedIndex = Math.max(0, cards.findIndex((card) => card.id === player.selected))
   const [frontIndex, setFrontIndex] = useState(selectedIndex)
   const [inspected, setInspected] = useState<StrategyCard | null>(null)
+  const [handMode, setHandMode] = useState<HandMode>(readHandMode)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const gestureAxis = useRef<GestureAxis>('pending')
   const suppressClick = useRef(false)
   const handKey = cards.map((card) => card.id).join('|')
   const bonuses = useMemo(() => game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round), [game.bonusNeeds, game.round])
 
+  useLayoutEffect(() => {
+    document.documentElement.dataset.strategyHand = handMode
+    try {
+      window.localStorage.setItem(HAND_MODE_KEY, handMode)
+    } catch {
+      // The preference remains available for this session when storage is blocked.
+    }
+  }, [handMode])
+
   useEffect(() => {
     setFrontIndex(selectedIndex)
     setInspected(null)
   }, [handKey, selectedIndex])
 
-  if (!playActive || game.phase !== 'planning' || cards.length === 0) return null
+  useEffect(() => {
+    if (handMode === 'undocked') setInspected(null)
+  }, [handMode])
+
+  const available = playActive && game.phase === 'planning' && cards.length > 0
+  if (!available) return null
 
   const cycle = (direction: -1 | 1) => setFrontIndex((index) => wrap(index + direction, cards.length))
 
@@ -89,40 +131,56 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
   }
 
   const offsets = [0, -48, 48, -86, 86]
+  const preference = handTarget ? createPortal(
+    <section className={`hand-dock-preference ${handMode}`} aria-label="Strategy hand display preference">
+      <div>
+        <span>Strategy hand</span>
+        <strong>{handMode === 'docked' ? 'Docked behind the menu' : 'Shown in the page'}</strong>
+      </div>
+      <button onClick={() => setHandMode(handMode === 'docked' ? 'undocked' : 'docked')}>
+        {handMode === 'docked' ? 'Undock' : 'Dock to bottom'}
+      </button>
+    </section>,
+    handTarget,
+  ) : null
 
   return (
     <>
-      <aside className="sticky-strategy-hand" aria-label="Your Strategy hand">
-        <div className="sticky-hand-caption"><span>Your hand</span><b>{frontIndex + 1} of {cards.length}</b><small>Tap the front card to inspect</small></div>
-        <div className="sticky-hand-fan" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => { pointerStart.current = null; gestureAxis.current = 'pending' }}>
-          {cards.map((card, index) => {
-            const order = wrap(index - frontIndex, cards.length)
-            const front = order === 0
-            const selected = card.id === player.selected
-            const visibleOrder = Math.min(order, offsets.length - 1)
-            const style: CSSProperties = {
-              zIndex: front ? cards.length + 2 : cards.length - visibleOrder,
-              transform: `translateX(calc(-50% + ${offsets[visibleOrder]}px)) translateY(${front ? 0 : 8 + visibleOrder * 3}px) rotate(${front ? 0 : offsets[visibleOrder] / 24}deg) scale(${front ? 1 : .94 - visibleOrder * .015})`,
-            }
-            return (
-              <button
-                className={`sticky-hand-card ${front ? 'front' : 'rear'} ${selected ? 'selected' : ''}`}
-                style={style}
-                key={card.id}
-                onClick={() => {
-                  if (suppressClick.current) return
-                  if (!front) setFrontIndex(index)
-                  else setInspected(card)
-                }}
-                aria-label={front ? `Inspect ${card.title}` : `Bring ${card.title} to the front`}
-              >
-                <CardFace kind="strategy" id={card.id} />
-                {selected && <span className="sticky-card-chosen">Chosen</span>}
-              </button>
-            )
-          })}
-        </div>
-      </aside>
+      {preference}
+
+      {handMode === 'docked' && (
+        <aside className="sticky-strategy-hand" aria-label="Your Strategy hand">
+          <div className="sticky-hand-caption"><span>Your hand</span><b>{frontIndex + 1} of {cards.length}</b><small>Tap the front card to inspect</small></div>
+          <div className="sticky-hand-fan" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => { pointerStart.current = null; gestureAxis.current = 'pending' }}>
+            {cards.map((card, index) => {
+              const order = wrap(index - frontIndex, cards.length)
+              const front = order === 0
+              const selected = card.id === player.selected
+              const visibleOrder = Math.min(order, offsets.length - 1)
+              const style: CSSProperties = {
+                zIndex: front ? cards.length + 2 : cards.length - visibleOrder,
+                transform: `translateX(calc(-50% + ${offsets[visibleOrder]}px)) translateY(${front ? 0 : 8 + visibleOrder * 3}px) rotate(${front ? 0 : offsets[visibleOrder] / 24}deg) scale(${front ? 1 : .94 - visibleOrder * .015})`,
+              }
+              return (
+                <button
+                  className={`sticky-hand-card ${front ? 'front' : 'rear'} ${selected ? 'selected' : ''}`}
+                  style={style}
+                  key={card.id}
+                  onClick={() => {
+                    if (suppressClick.current) return
+                    if (!front) setFrontIndex(index)
+                    else setInspected(card)
+                  }}
+                  aria-label={front ? `Inspect ${card.title}` : `Bring ${card.title} to the front`}
+                >
+                  <CardFace kind="strategy" id={card.id} />
+                  {selected && <span className="sticky-card-chosen">Chosen</span>}
+                </button>
+              )
+            })}
+          </div>
+        </aside>
+      )}
 
       {inspected && (
         <dialog open className="mobile-card-dialog sticky-hand-inspector" onClick={() => setInspected(null)} aria-label={inspected.title}>
