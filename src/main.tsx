@@ -21,6 +21,7 @@ import './tabletop/sticky-strategy-hand-compat.css'
 import './tabletop/sticky-hand-refinement.css'
 import './tabletop/desktop-parity-story.css'
 import './tabletop/desktop-planning-bridge.css'
+import './tabletop/collective-story.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
