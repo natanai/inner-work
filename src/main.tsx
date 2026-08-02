@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { PlanningSheetCloseGuard } from './tabletop/PlanningSheetCloseGuard'
 import './tabletop/base.css'
 import './tabletop/table.css'
 import './tabletop/responsive.css'
@@ -21,6 +22,7 @@ import './tabletop/sticky-hand-refinement.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <PlanningSheetCloseGuard />
     <App />
   </StrictMode>,
 )
