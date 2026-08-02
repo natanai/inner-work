@@ -249,12 +249,82 @@ function chooseNpc(cognition: Cognition, all: Cognition[], game: GameState): str
   return ranked[0]?.strategy.id ?? cognition.hand[Math.floor(Math.random() * cognition.hand.length)]?.id ?? null
 }
 
-function story(situation: SituationCard, cognition: Cognition, strategy: StrategyCard, matches: string[]): string {
-  return `${cognition.name} responded to “${situation.title}” with “${strategy.title},” tending to ${matches.join(', ') || 'an unnamed need'}.`
-}
-
 function unique(items: string[]): string[] {
   return [...new Set(items)]
+}
+
+function joinNatural(items: string[]): string {
+  const values = unique(items)
+  if (values.length === 0) return ''
+  if (values.length === 1) return values[0]
+  if (values.length === 2) return `${values[0]} and ${values[1]}`
+  return `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}`
+}
+
+function needPhrase(needsToName: string[]): string {
+  const values = unique(needsToName)
+  return values.length === 1 ? `the need for ${values[0]}` : `the needs for ${joinNatural(values)}`
+}
+
+function actionPhrase(title: string): string {
+  const cleaned = title.replace(/[.!?]+$/, '')
+  return cleaned ? cleaned[0].toLowerCase() + cleaned.slice(1) : title
+}
+
+function collectiveStory(
+  situation: SituationCard,
+  actor: Cognition,
+  strategy: StrategyCard,
+  publicBefore: Array<{ cognition: Cognition; slot: NeedSlot }>,
+  choices: Cognition[],
+  bonusesBefore: BonusNeed[],
+  bonusCreated: BonusNeed[],
+): string {
+  const effects = effectsFor(strategy, situation).filter((effect) => effect.amount > 0)
+  const matchesNeed = (need: string) => effects.some((effect) => effect.need === need)
+  const ownPublic = unique(publicBefore
+    .filter(({ cognition, slot }) => cognition.id === actor.id && slot.gifts > 0 && matchesNeed(slot.card.need))
+    .map(({ slot }) => slot.card.need))
+
+  const otherPublic = new Map<string, string[]>()
+  for (const { cognition, slot } of publicBefore) {
+    if (cognition.id === actor.id || slot.gifts === 0 || !matchesNeed(slot.card.need)) continue
+    otherPublic.set(cognition.name, unique([...(otherPublic.get(cognition.name) ?? []), slot.card.need]))
+  }
+
+  const privateOwners = unique(choices
+    .filter((cognition) => cognition.privateNeed.gifts > 0 && matchesNeed(cognition.privateNeed.card.need))
+    .map((cognition) => cognition.name))
+  const matchedBonuses = bonusesBefore.filter((bonus) => bonus.gifts > 0 && matchesNeed(bonus.need))
+
+  const motivation = ownPublic.length > 0
+    ? `${actor.name} brought forward ${needPhrase(ownPublic)}`
+    : matchedBonuses.length > 0
+      ? `${actor.name} recognized ${needPhrase(matchedBonuses.map((bonus) => bonus.need))} in the active Bonus Needs`
+      : `${actor.name} brought forward this Strategy`
+
+  const opening = `${motivation}. That influenced the whole psyche to choose a shared action: the person chose to ${actionPhrase(strategy.title)} during “${situation.title}.”`
+  const consequences: string[] = []
+
+  for (const [cognitionName, needsTended] of otherPublic) {
+    consequences.push(`It also tended ${cognitionName}’s ${needPhrase(needsTended)}`)
+  }
+
+  if (privateOwners.length > 0) {
+    const ownerText = privateOwners.length === 1 ? privateOwners[0] : joinNatural(privateOwners)
+    consequences.push(`It also quietly tended a hidden Private Need held by ${ownerText}`)
+  }
+
+  for (const bonus of matchedBonuses) {
+    consequences.push(`It also tended the active Bonus Need for ${bonus.need}, introduced when ${bonus.sourceCognitionName} brought forward “${bonus.sourceStrategyTitle}”`)
+  }
+
+  if (bonusCreated.length > 0) {
+    const created = joinNatural(bonusCreated.map((bonus) => bonus.need))
+    consequences.push(`This shared action also introduced ${bonusCreated.length === 1 ? 'a new Bonus Need' : 'new Bonus Needs'} for ${created}, which ${bonusCreated.length === 1 ? 'will' : 'will'} enter play next round`)
+  }
+
+  return `${opening}${consequences.length ? ` ${consequences.join('. ')}.` : ''}`
 }
 
 export function resolveRound(game: GameState): GameState {
@@ -364,7 +434,6 @@ export function resolveRound(game: GameState): GameState {
     const actorCreated = bonusCreated.filter((bonus) => bonus.sourceCognitionId === actor.id && bonus.sourceStrategyId === strategy.id)
     const shared = legal ? effects.reduce((total, effect) => total + publicBefore.reduce((subtotal, { slot }) => slot.gifts > 0 && slot.card.need === effect.need ? subtotal + Math.min(slot.gifts, effect.amount) : subtotal, 0), 0) : 0
     const privatePoints = legal ? effects.reduce((total, effect) => total + choices.reduce((subtotal, target) => target.privateNeed.gifts > 0 && target.privateNeed.card.need === effect.need ? subtotal + Math.min(target.privateNeed.gifts, effect.amount) : subtotal, 0), 0) : 0
-    const matches = unique([...publicMatches, ...privateMatches, ...bonusMatches])
     return [{
       cognitionId: actor.id,
       cognitionName: actor.name,
@@ -376,7 +445,9 @@ export function resolveRound(game: GameState): GameState {
       privateMatches,
       bonusMatches,
       bonusCreated: actorCreated,
-      story: legal ? story(game.situation, actor, strategy, matches) : `${actor.name} discarded “${strategy.title}”; it did not tend one of its own Public Needs or an active Bonus Need.`,
+      story: legal
+        ? collectiveStory(game.situation, actor, strategy, publicBefore, choices, bonusesBefore, actorCreated)
+        : `${actor.name} could not bring “${strategy.title}” into the shared action because it did not tend one of that Cognition’s own Public Needs or an active Bonus Need. The card was discarded.`,
     }]
   })
 
