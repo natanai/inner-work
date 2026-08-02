@@ -35,11 +35,12 @@
     width: min(142px, 36vw);
   }
 
-  /* On the Play tab, stack the bank vertically beside the hand instead of across it. */
+  /* While no Strategy is committed, the bank occupies the narrow right-side lane. */
   body:has(.mobile-play-page.mobile-tab-play) .mobile-inventory-bank {
     left: auto;
     right: 8px;
     bottom: calc(57px + env(safe-area-inset-bottom));
+    z-index: 74;
     grid-template-columns: 1fr;
     gap: 2px;
     width: 96px;
@@ -73,8 +74,61 @@
     height: 21px;
   }
 
-  /* The face-down Need is a rectangular sleeve, not an oval display pod. */
+  /* Once a Strategy is committed, stack the bank and action dock instead of letting them collide. */
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-inventory-bank {
+    left: 50%;
+    right: auto;
+    bottom: calc(55px + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+    width: min(296px, calc(100vw - 24px));
+    min-height: 47px;
+    padding: 4px;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 9px 9px;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-item {
+    grid-template-columns: 26px minmax(0, 1fr);
+    min-height: 39px;
+    padding: 3px 7px;
+    border-radius: 11px;
+    column-gap: 5px;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-item > span {
+    font-size: .46rem;
+    letter-spacing: .055em;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-item > strong {
+    font-size: .72rem;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-group .gift-piece,
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-personal > b,
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-magnifier > svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-action-dock {
+    bottom: calc(108px + env(safe-area-inset-bottom));
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-play-page.mobile-tab-play {
+    padding-bottom: calc(205px + env(safe-area-inset-bottom));
+  }
+
+  /* Card inspectors and confirmation dialogs own the foreground completely. */
+  body:has(.mobile-card-dialog[open], .private-review-dialog[open], .discussion-dialog[open]) .mobile-inventory-bank {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Restore the original illustrated Need/gift card back. Privacy is conveyed by context and a small label. */
   .mobile-deal-private {
+    position: relative;
     display: block;
     min-width: 0;
   }
@@ -89,64 +143,50 @@
     height: auto;
     aspect-ratio: 5 / 7;
     overflow: hidden;
-    isolation: isolate;
-    border: 2px solid #603126;
+    border: 0;
     border-radius: 7px !important;
-    background:
-      linear-gradient(135deg, rgba(255,255,255,.2), transparent 42%),
-      repeating-linear-gradient(115deg, rgba(99,54,37,.055) 0 1px, transparent 1px 8px),
-      #e6d3a3;
-    box-shadow: 0 8px 16px rgba(46, 23, 16, .24), inset 0 0 0 3px rgba(255, 247, 216, .45);
+    background: #eadcae;
+    box-shadow: 0 8px 16px rgba(46, 23, 16, .24);
   }
 
   .mobile-deal-private .card-back > img,
   .mobile-private-card-frame > .card-back > img,
   .private-back > .card-back > img,
   .large-private.card-back > img {
-    position: absolute;
-    inset: 0;
+    position: static;
     display: block;
     width: 100%;
     height: 100%;
-    opacity: 0;
+    opacity: 1;
+    object-fit: cover;
   }
 
   .mobile-deal-private .card-back::before,
   .mobile-private-card-frame > .card-back::before,
   .private-back > .card-back::before,
-  .large-private.card-back::before {
-    content: '';
-    position: absolute;
-    z-index: 1;
-    inset: 7%;
-    border: 1px solid rgba(96, 49, 38, .46);
-    border-radius: 4px;
-    background: radial-gradient(circle at 50% 38%, rgba(255, 245, 204, .58), transparent 45%);
-    pointer-events: none;
-  }
-
+  .large-private.card-back::before,
   .mobile-deal-private .card-back::after,
   .mobile-private-card-frame > .card-back::after,
   .private-back > .card-back::after,
   .large-private.card-back::after {
-    content: 'PRIVATE\A NEED';
-    position: absolute;
-    z-index: 2;
-    inset: 18% 11%;
-    display: grid;
-    place-items: center;
-    white-space: pre;
-    border-top: 1px solid rgba(96, 49, 38, .42);
-    border-bottom: 1px solid rgba(96, 49, 38, .42);
-    color: #663529;
-    font: 800 clamp(.45rem, 3.1vw, .8rem)/1.45 'DM Sans', sans-serif;
-    letter-spacing: .12em;
-    text-align: center;
-    pointer-events: none;
+    content: none;
   }
 
   .mobile-deal-private > span {
-    display: none;
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    bottom: 5px;
+    display: inline-flex;
+    transform: translateX(-50%);
+    padding: 2px 5px;
+    border-radius: 999px;
+    background: rgba(48, 24, 16, .78);
+    color: #fff8df;
+    font-size: .42rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   /* Full-size docked-hand inspection remains a swipeable hand. */
@@ -247,6 +287,12 @@
     body:has(.mobile-play-page.mobile-tab-play) .mobile-inventory-bank {
       right: 6px;
       width: 90px;
+    }
+
+    body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-inventory-bank {
+      left: 50%;
+      right: auto;
+      width: calc(100vw - 16px);
     }
 
     .sticky-inspector-arrow {
