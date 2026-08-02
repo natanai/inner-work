@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path'
 
 const root = resolve(process.cwd())
 const archiveDir = join(root, 'assets', 'card-archive')
+const replacementDir = join(archiveDir, 'replacements')
 const outputDir = join(root, 'public', 'cards')
 const archivePath = join(root, '.card-assets.tar.gz')
 const expectedArchiveBytes = 129113
@@ -11,6 +12,7 @@ const expectedChunks = Array.from(
   { length: 22 },
   (_, index) => `cards-${String(index).padStart(2, '0')}.b64`,
 )
+const splitReplacements = new Set(['13', '16', '17', '18'])
 const expectedAssets = new Map([
   ['strategies.avif', 66788],
   ['needs.avif', 22141],
@@ -28,12 +30,30 @@ if (JSON.stringify(chunks) !== JSON.stringify(expectedChunks)) {
   throw new Error(`Card archive chunk sequence is incomplete. Found: ${chunks.join(', ')}`)
 }
 
-const encoded = (
-  await Promise.all(chunks.map((name) => readFile(join(archiveDir, name), 'utf8')))
+const encodedParts = await Promise.all(
+  expectedChunks.map(async (name, index) => {
+    const number = name.slice(6, 8)
+    let part
+
+    if (splitReplacements.has(number)) {
+      const [first, second] = await Promise.all([
+        readFile(join(replacementDir, `cards-${number}.a.part`), 'utf8'),
+        readFile(join(replacementDir, `cards-${number}.b.part`), 'utf8'),
+      ])
+      part = `${first.trim()}${second.trim()}`
+    } else {
+      part = (await readFile(join(archiveDir, name), 'utf8')).trim()
+    }
+
+    const expectedLength = index === expectedChunks.length - 1 ? 4152 : 8000
+    if (part.length !== expectedLength) {
+      throw new Error(`${name} has ${part.length} encoded characters; expected ${expectedLength}.`)
+    }
+    return part
+  }),
 )
-  .map((part) => part.trim())
-  .join('')
-const archive = Buffer.from(encoded, 'base64')
+
+const archive = Buffer.from(encodedParts.join(''), 'base64')
 
 if (archive.byteLength !== expectedArchiveBytes) {
   throw new Error(
