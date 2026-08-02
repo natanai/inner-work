@@ -71,6 +71,7 @@ export function analyzeStrategy(game: GameState, cognition: Cognition, card: Str
   const bonuses = activeBonuses(game).filter((bonus) => strengthFor(game, card, bonus.need) > 0)
   const privateStrength = strengthFor(game, card, cognition.privateNeed.card.need)
   const privatePotential = cognition.privateNeed.gifts > 0 ? Math.min(cognition.privateNeed.gifts, privateStrength) : 0
+  const visiblePrivatePotential = cognition.human && !cognition.privateVisible ? 0 : privatePotential
   const groupPotential = matches.reduce((total, match) => total + match.gifts, 0)
   const bonusPotential = bonuses.reduce((total, bonus) => total + Math.min(bonus.gifts, strengthFor(game, card, bonus.need)), 0)
   const ownPotential = ownPublic.reduce((total, match) => total + match.gifts, 0)
@@ -84,7 +85,7 @@ export function analyzeStrategy(game: GameState, cognition: Cognition, card: Str
   })
 
   const score = playable
-    ? ownPotential * 4.5 + groupPotential * 1.35 + bonusPotential * 3 + privatePotential * 3.5
+    ? ownPotential * 4.5 + groupPotential * 1.35 + bonusPotential * 3 + visiblePrivatePotential * 3.5
     : 0
 
   return {
@@ -149,8 +150,8 @@ export function generateTradeProposals(game: GameState): TradeProposal[] {
     .sort((left, right) => {
       const leftMutual = left.mutualUpgrade ? 8 : 0
       const rightMutual = right.mutualUpgrade ? 8 : 0
-      const leftPrivate = left.playerReceives.tendsOwnPrivate ? 4 : 0
-      const rightPrivate = right.playerReceives.tendsOwnPrivate ? 4 : 0
+      const leftPrivate = player.privateVisible && left.playerReceives.tendsOwnPrivate ? 4 : 0
+      const rightPrivate = player.privateVisible && right.playerReceives.tendsOwnPrivate ? 4 : 0
       const leftValue = leftMutual + leftPrivate + left.playerReceives.score + left.npcReceives.score + Math.min(left.playerGain, left.npcGain)
       const rightValue = rightMutual + rightPrivate + right.playerReceives.score + right.npcReceives.score + Math.min(right.playerGain, right.npcGain)
       return rightValue - leftValue
