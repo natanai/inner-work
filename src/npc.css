@@ -1,0 +1,35 @@
+.part-board:not(:first-child) .strategy-card {
+  cursor: default;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.13), transparent 16%),
+    linear-gradient(145deg, #292139, #15111f);
+  color: rgba(255, 255, 255, 0.82);
+  border-color: color-mix(in srgb, var(--part-accent) 38%, transparent);
+}
+
+.part-board:not(:first-child) .strategy-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.part-board:not(:first-child) .strategy-card.is-selected {
+  background: linear-gradient(150deg, #fffdfa, #efe9df);
+  color: #211a2d;
+  transform: translateY(-5px);
+}
+
+.part-board:not(:first-child) .strategy-card .card-kicker {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.part-board:not(:first-child) .strategy-card.is-selected .card-kicker {
+  color: #655f6e;
+}
+
+.part-board:not(:first-child) .strategy-card small {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.part-board:not(:first-child) .strategy-card.is-selected small {
+  color: #6b6571;
+}
