@@ -14,14 +14,25 @@ export function MobileHandPager({ game }: { game: GameState }) {
       setCarousel(null)
       return
     }
-    const frame = window.requestAnimationFrame(() => {
+
+    const connect = () => {
       const section = document.querySelector<HTMLElement>('.mobile-hand-section')
       const row = section?.querySelector<HTMLElement>('.mobile-hand-carousel') ?? null
-      setTarget(section ?? null)
-      setCarousel(row)
+      setTarget((current) => current === section ? current : section ?? null)
+      setCarousel((current) => current === row ? current : row)
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      connect()
       setIndex(0)
     })
-    return () => window.cancelAnimationFrame(frame)
+    const observer = new MutationObserver(connect)
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [game.phase, handKey])
 
   useEffect(() => {
