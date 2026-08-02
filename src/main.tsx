@@ -8,6 +8,7 @@ import './card-fronts.css'
 import './high-resolution-cards.css'
 import './tabletop/mobile.css'
 import './tabletop/mobile-polish.css'
+import './tabletop/situation-needs-flow.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
