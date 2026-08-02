@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { CardFace, GiftIcon, strategyText } from './Cards'
 import type { GameState, Resolution } from './model'
+import { bonusOriginPhrase, nvcStory, strategyActionPhrase } from './storyNarrative'
 
 type Props = {
   game: GameState
@@ -51,7 +52,7 @@ function RevealMoment({ game, onInspect }: { game: GameState; onInspect: (inspec
       <header>
         <span>Simultaneous reveal</span>
         <h1>Three parts influenced one shared person.</h1>
-        <p>The Strategies turn over together. The table now slows down so each Cognition can explain what it brought forward, what the person did, and what that action tended across the whole psyche.</p>
+        <p>The Strategies turn over together. The table now slows down to notice which Needs motivated each Cognition, what the shared person did in response, and what that action tended across the whole psyche.</p>
       </header>
       <div className="mobile-story-reveal-cards">
         {game.resolution.map((line, index) => (
@@ -66,7 +67,7 @@ function RevealMoment({ game, onInspect }: { game: GameState; onInspect: (inspec
           </button>
         ))}
       </div>
-      <p className="mobile-story-pause">The gifts have not moved yet. First, hear what each shared action means.</p>
+      <p className="mobile-story-pause">The gifts have not moved yet. First, hear which Needs motivated each shared action.</p>
     </section>
   )
 }
@@ -89,12 +90,13 @@ function StoryMoment({
   const human = line.cognitionId === 'alpha'
   const [showExample, setShowExample] = useState(false)
   const introduced = line.bonusCreated.map((bonus) => bonus.need)
+  const generatedStory = nvcStory(game, line)
 
   return (
     <section className="mobile-story-turn">
       <header>
         <span>Story {index + 1} of {game.resolution.length} · {line.cognitionName}</span>
-        <h1>{line.cognitionName} influenced one shared action.</h1>
+        <h1>Which Needs motivated this shared action?</h1>
       </header>
 
       <div className="mobile-story-card-stage">
@@ -112,23 +114,23 @@ function StoryMoment({
 
       <div className="mobile-story-context-line">
         <span>During</span><strong>{game.situation.title}</strong>
-        <span>the person chose to</span><strong>{line.strategy.title}</strong>
+        <span>the shared person chose to</span><strong>{strategyActionPhrase(line.strategy)}</strong>
       </div>
 
       {human ? (
         <section className="mobile-story-writing">
-          <p className="mobile-story-principle">The Cognition supplies the motivation. The one shared person performs the Strategy.</p>
+          <p className="mobile-story-principle">In NVC, behavior is understood as an attempt to meet underlying Needs. The Cognition carries part of the motivation; the one shared person performs the Strategy.</p>
           <div className="mobile-story-cues">
-            <p><b>1</b><span><strong>Motivation</strong>What Need did {line.cognitionName} bring forward?</span></p>
+            <p><b>1</b><span><strong>Need</strong>Which Need was {line.cognitionName} seeking to meet?</span></p>
             <p><b>2</b><span><strong>Shared action</strong>What did the person actually say, do, notice, request, or change?</span></p>
-            <p><b>3</b><span><strong>Wider effect</strong>What else did the action tend{introduced.length ? `, and how did it introduce ${introduced.join(' and ')} as a Bonus Need` : ''}?</span></p>
+            <p><b>3</b><span><strong>Wider effect</strong>What other Needs did the action tend{introduced.length ? `, and how did it introduce ${introduced.join(' and ')} as a Bonus Need` : ''}?</span></p>
           </div>
-          <label htmlFor="mobile-dedicated-story">Tell the shared-person story in your own words.</label>
+          <label htmlFor="mobile-dedicated-story">Tell the Need-and-Strategy story in your own words.</label>
           <textarea
             id="mobile-dedicated-story"
             value={humanStory}
             onChange={(event) => setHumanStory(event.target.value)}
-            placeholder={`${line.cognitionName} brought forward… The person chose to… It also…`}
+            placeholder={`${line.cognitionName} was motivated by its need for… Through its influence, the shared person chose to… That action also…`}
           />
           <button className="quiet mobile-story-example-toggle" onClick={() => setShowExample((visible) => !visible)}>
             {showExample ? 'Hide example' : 'See an example'}
@@ -136,13 +138,13 @@ function StoryMoment({
           {showExample && (
             <aside className="mobile-story-example">
               <span>Generated from this play</span>
-              <p>{line.story}</p>
-              <button className="quiet" onClick={() => setHumanStory(line.story)}>Use as a starting point</button>
+              <p>{generatedStory}</p>
+              <button className="quiet" onClick={() => setHumanStory(generatedStory)}>Use as a starting point</button>
             </aside>
           )}
         </section>
       ) : (
-        <blockquote className="mobile-story-npc-story">{line.story}</blockquote>
+        <blockquote className="mobile-story-npc-story">{generatedStory}</blockquote>
       )}
 
       <p className="mobile-story-card-text">{strategyText(line.strategy)}</p>
@@ -199,7 +201,7 @@ function RoundSummary({ game }: { game: GameState }) {
             <h2>Bonus Needs entering next round</h2>
             {ledger.bonusCreated.map((bonus) => (
               <p key={bonus.id}>
-                <span>{bonus.need} · introduced when {bonus.sourceCognitionName} brought forward “{bonus.sourceStrategyTitle}”</span>
+                <span>{bonus.need} · {bonusOriginPhrase(bonus)}</span>
                 <b><GiftIcon variation={1} />{bonus.gifts}</b>
               </p>
             ))}

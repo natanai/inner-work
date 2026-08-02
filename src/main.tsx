@@ -23,6 +23,7 @@ import './tabletop/desktop-parity-story.css'
 import './tabletop/desktop-planning-bridge.css'
 import './tabletop/collective-story.css'
 import './tabletop/mobile-story-table.css'
+import './tabletop/situation-deck-orientation.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
