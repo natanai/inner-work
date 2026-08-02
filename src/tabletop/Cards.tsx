@@ -129,8 +129,12 @@ export function Magnifier({
   )
 }
 
+function effectText(need: string, amount: number): string {
+  return amount > 0 ? `${need} +${amount}` : `Bonus Need: ${need} +${Math.abs(amount)}`
+}
+
 export function strategyText(card: StrategyCard): string {
-  const normal = card.effects.map((effect) => `${effect.need} ${effect.amount > 0 ? `+${effect.amount}` : effect.amount}`).join(' · ')
-  const event = card.eventEffects.length ? ` Event: ${card.eventEffects.map((effect) => `${effect.need} ${effect.amount}`).join(' · ')}.` : ''
+  const normal = card.effects.map((effect) => effectText(effect.need, effect.amount)).join(' · ')
+  const event = card.eventEffects.length ? ` Event Situation: ${card.eventEffects.map((effect) => effectText(effect.need, effect.amount)).join(' · ')}.` : ''
   return `${normal}.${event}`
 }
