@@ -1,0 +1,156 @@
+@media(max-width:760px){
+  /* Keep setup actions in the document instead of floating over explanatory content. */
+  .private-choice-confirm,
+  .mobile-take-seat{
+    position:static!important;
+    inset:auto!important;
+    display:block;
+    width:min(100%,420px);
+    margin:18px auto 0!important;
+    box-shadow:0 10px 24px rgba(57,27,17,.18);
+  }
+
+  /* The mobile deal is an inspectable table, not a clipped thumbnail collage. */
+  .mobile-deal-page{padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+  .mobile-deal-stage{padding-bottom:10px}
+  .mobile-deal-situation,
+  .mobile-deal-cognition{overflow:visible}
+  .mobile-deal-card-button,
+  .mobile-deal-hand-card{
+    display:block;
+    margin:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:inherit;
+    overflow:visible;
+  }
+  .mobile-deal-card-button{width:100%}
+  .mobile-deal-card-button .physical-card,
+  .mobile-deal-hand-card .physical-card,
+  .mobile-deal-situation .physical-card,
+  .mobile-deal-need .physical-card{
+    display:block;
+    width:100%;
+    height:auto;
+    border-radius:0!important;
+    clip-path:none!important;
+    object-fit:contain;
+    box-shadow:none;
+  }
+  .mobile-deal-situation{border-radius:18px}
+  .mobile-deal-situation .mobile-deal-card-button{box-shadow:0 9px 20px rgba(35,15,10,.22)}
+  .mobile-deal-need{overflow:visible}
+  .mobile-deal-need .mobile-deal-card-button{box-shadow:0 5px 11px rgba(35,15,10,.18)}
+  .mobile-deal-hand{
+    position:relative;
+    width:220px;
+    height:150px;
+    margin:12px auto 0;
+    overflow:visible;
+  }
+  .mobile-deal-opponents .mobile-deal-hand{width:128px;height:88px}
+  .mobile-deal-hand-card{
+    position:absolute!important;
+    left:50%!important;
+    top:0!important;
+    width:92px!important;
+    transform-origin:50% 92%;
+    transition:transform .18s ease,filter .18s ease;
+  }
+  button.mobile-deal-hand-card:active{filter:brightness(.95)}
+  .mobile-deal-cognition.human .mobile-deal-hand-card{width:112px!important}
+  .mobile-deal-hand-card-1{transform:translateX(-88%) rotate(-8deg)!important}
+  .mobile-deal-hand-card-2{transform:translateX(-60%) rotate(-3deg)!important}
+  .mobile-deal-hand-card-3{transform:translateX(-32%) rotate(3deg)!important}
+  .mobile-deal-hand-card-4{transform:translateX(-4%) rotate(8deg)!important}
+  .mobile-deal-opponents .mobile-deal-hand-card-1{transform:translateX(-78%) rotate(-7deg)!important}
+  .mobile-deal-opponents .mobile-deal-hand-card-2{transform:translateX(-58%) rotate(-2deg)!important}
+  .mobile-deal-opponents .mobile-deal-hand-card-3{transform:translateX(-38%) rotate(2deg)!important}
+  .mobile-deal-opponents .mobile-deal-hand-card-4{transform:translateX(-18%) rotate(7deg)!important}
+  .mobile-deal-inspector .mobile-dialog-inner section{padding:8px 12px;text-align:center}
+
+  /* Planning tools live immediately before the hand instead of floating over the table. */
+  .mobile-hand-section.true-stack-mounted{display:flex!important;flex-direction:column!important}
+  .discussion-launch-in-flow{
+    position:static!important;
+    z-index:auto!important;
+    order:-10;
+    align-self:stretch;
+    width:100%;
+    margin:0 0 15px!important;
+    padding:10px 12px!important;
+    border-radius:13px!important;
+    box-shadow:0 7px 16px rgba(45,23,16,.14)!important;
+    backdrop-filter:none!important;
+  }
+  .magnifier-launch{display:none!important}
+
+  /* Progressive disclosure keeps the trading screen focused on decisions. */
+  .discussion-dialog-inner{padding-top:max(10px,env(safe-area-inset-top))}
+  .discussion-dialog-header{align-items:start;padding-bottom:10px}
+  .discussion-dialog-header h1{margin-top:2px;font-size:1.42rem}
+  .discussion-section{margin-top:16px}
+  .discussion-section>header h2,.private-goal h2{font-size:1.12rem}
+  .discussion-info{margin-top:9px;border:1px solid rgba(112,72,49,.18);border-radius:12px;background:rgba(255,249,233,.62)}
+  .discussion-info>summary{display:flex;align-items:center;gap:7px;padding:8px 10px;cursor:pointer;list-style:none;color:#76513d;font-size:.66rem}
+  .discussion-info>summary::-webkit-details-marker{display:none}
+  .discussion-info>summary span{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#6e3427;color:#fff5dc;font:800 .72rem serif}
+  .discussion-info>summary b{font-weight:750}
+  .discussion-info>div{padding:0 11px 10px;color:#725340;font-size:.68rem;line-height:1.4}
+  .discussion-info p{margin:6px 0 0}
+  .responsibility-card>small{display:none}
+  .private-goal{padding:14px 15px}
+  .private-goal p{font-size:.69rem}
+  .private-goal-review{width:100%;margin-top:8px;padding:10px 12px;border:0;border-radius:11px;background:#efc34f;color:#4b2d1e;font-weight:850}
+  .trade-room>header p,.trade-secrecy{display:none}
+  .trade-proposal{padding:11px}
+  .trade-proposal>.primary{margin-top:10px}
+  .trade-cards .physical-card,
+  .planner-card-image .physical-card{border-radius:0!important;clip-path:none!important}
+  .progressive-panel{border:1px solid rgba(112,72,49,.18);border-radius:15px;background:#fff9e9}
+  .progressive-panel>summary{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:12px;cursor:pointer;list-style:none}
+  .progressive-panel>summary::-webkit-details-marker{display:none}
+  .progressive-panel>summary span{color:#9d563c;font-size:.54rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+  .progressive-panel>summary strong{font-family:'Fraunces',serif;font-size:.93rem}
+  .progressive-panel>summary>b{grid-column:2;grid-row:1/3;font-size:1.15rem}
+  .progressive-panel[open]>summary>b{transform:rotate(45deg)}
+  .progressive-panel .planner-cards{margin:0;padding:0 10px 10px}
+
+  /* The Needs tab offers the physical magnifier where the face-down card lives. */
+  .mobile-private-copy>.magnifier{display:none!important}
+  .needs-review-private{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    justify-self:start;
+    margin-top:9px;
+    padding:8px 10px;
+    border:1px solid rgba(91,49,34,.22);
+    border-radius:999px;
+    background:#6e3427;
+    color:#fff4da;
+    box-shadow:0 5px 11px rgba(48,23,16,.18);
+  }
+  .needs-review-private span{font-size:1.2rem;line-height:1}
+  .needs-review-private strong{font-size:.66rem}
+  .needs-review-private:disabled{opacity:.5}
+
+  /* Storytelling reconnects the played card to lived experience. */
+  .story-meaning-cue{order:-1;margin:0 0 11px;padding:10px 11px;border-left:4px solid #dba936;border-radius:0 11px 11px 0;background:#fff0be;color:#5e422f}
+  .story-meaning-cue span{color:#9d563c;font-size:.55rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+  .story-meaning-cue p{margin:4px 0 0;font-size:.7rem;line-height:1.42}
+  .story-card{animation:place-played-card .42s cubic-bezier(.2,.75,.25,1) both}
+  .shared-gift-transfer .gift-piece{animation:gift-arrives .5s cubic-bezier(.2,.8,.25,1) both}
+}
+
+@keyframes place-played-card{
+  from{opacity:0;transform:translateY(34px) rotate(4deg) scale(.94)}
+  to{opacity:1;transform:translateY(0) rotate(0) scale(1)}
+}
+@keyframes gift-arrives{
+  0%{opacity:0;transform:translateY(-18px) rotate(-12deg) scale(.7)}
+  70%{opacity:1;transform:translateY(3px) rotate(3deg) scale(1.08)}
+  100%{opacity:1;transform:none}
+}
