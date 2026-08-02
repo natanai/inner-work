@@ -57,13 +57,16 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
   const handTarget = useHandTarget()
   const selectedIndex = Math.max(0, cards.findIndex((card) => card.id === player.selected))
   const [frontIndex, setFrontIndex] = useState(selectedIndex)
-  const [inspected, setInspected] = useState<StrategyCard | null>(null)
+  const [inspectedIndex, setInspectedIndex] = useState<number | null>(null)
   const [handMode, setHandMode] = useState<HandMode>(readHandMode)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const gestureAxis = useRef<GestureAxis>('pending')
   const suppressClick = useRef(false)
+  const inspectorPointerStart = useRef<{ x: number; y: number } | null>(null)
+  const inspectorGestureAxis = useRef<GestureAxis>('pending')
   const handKey = cards.map((card) => card.id).join('|')
   const bonuses = useMemo(() => game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round), [game.bonusNeeds, game.round])
+  const inspected = inspectedIndex === null ? null : cards[wrap(inspectedIndex, cards.length)] ?? null
 
   useLayoutEffect(() => {
     document.documentElement.dataset.strategyHand = handMode
@@ -76,17 +79,25 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
 
   useEffect(() => {
     setFrontIndex(selectedIndex)
-    setInspected(null)
+    setInspectedIndex(null)
   }, [handKey, selectedIndex])
 
   useEffect(() => {
-    if (handMode === 'undocked') setInspected(null)
+    if (handMode === 'undocked') setInspectedIndex(null)
   }, [handMode])
 
   const available = playActive && game.phase === 'planning' && cards.length > 0
   if (!available) return null
 
   const cycle = (direction: -1 | 1) => setFrontIndex((index) => wrap(index + direction, cards.length))
+
+  const cycleInspector = (direction: -1 | 1) => {
+    setInspectedIndex((index) => {
+      const next = wrap((index ?? frontIndex) + direction, cards.length)
+      setFrontIndex(next)
+      return next
+    })
+  }
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     pointerStart.current = { x: event.clientX, y: event.clientY }
@@ -119,6 +130,36 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
     pointerStart.current = null
     gestureAxis.current = 'pending'
     window.setTimeout(() => { suppressClick.current = false }, 0)
+  }
+
+  const onInspectorPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    inspectorPointerStart.current = { x: event.clientX, y: event.clientY }
+    inspectorGestureAxis.current = 'pending'
+  }
+
+  const onInspectorPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = inspectorPointerStart.current
+    if (!start) return
+    const dx = event.clientX - start.x
+    const dy = event.clientY - start.y
+    if (inspectorGestureAxis.current === 'pending' && Math.max(Math.abs(dx), Math.abs(dy)) > 10) {
+      if (Math.abs(dx) > Math.abs(dy) * 1.25) {
+        inspectorGestureAxis.current = 'horizontal'
+        event.currentTarget.setPointerCapture?.(event.pointerId)
+      } else if (Math.abs(dy) > Math.abs(dx) * 1.15) {
+        inspectorGestureAxis.current = 'vertical'
+      }
+    }
+    if (inspectorGestureAxis.current === 'horizontal') event.preventDefault()
+  }
+
+  const onInspectorPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = inspectorPointerStart.current
+    if (!start) return
+    const dx = event.clientX - start.x
+    if (inspectorGestureAxis.current === 'horizontal' && Math.abs(dx) > 44) cycleInspector(dx < 0 ? 1 : -1)
+    inspectorPointerStart.current = null
+    inspectorGestureAxis.current = 'pending'
   }
 
   const choose = (card: StrategyCard) => {
@@ -169,7 +210,7 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
                   onClick={() => {
                     if (suppressClick.current) return
                     if (!front) setFrontIndex(index)
-                    else setInspected(card)
+                    else setInspectedIndex(index)
                   }}
                   aria-label={front ? `Inspect ${card.title}` : `Bring ${card.title} to the front`}
                 >
@@ -182,16 +223,27 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
         </aside>
       )}
 
-      {inspected && (
-        <dialog open className="mobile-card-dialog sticky-hand-inspector" onClick={() => setInspected(null)} aria-label={inspected.title}>
+      {inspected && inspectedIndex !== null && (
+        <dialog open className="mobile-card-dialog sticky-hand-inspector" onClick={() => setInspectedIndex(null)} aria-label={inspected.title}>
           <div className="mobile-dialog-inner mobile-dialog-strategy" onClick={(event) => event.stopPropagation()}>
-            <button className="mobile-dialog-close" onClick={() => setInspected(null)} aria-label="Close card">×</button>
-            <div className="mobile-dialog-image"><CardFace kind="strategy" id={inspected.id} /></div>
+            <button className="mobile-dialog-close" onClick={() => setInspectedIndex(null)} aria-label="Close card">×</button>
+            <div
+              className="sticky-inspector-card-stage"
+              onPointerDown={onInspectorPointerDown}
+              onPointerMove={onInspectorPointerMove}
+              onPointerUp={onInspectorPointerUp}
+              onPointerCancel={() => { inspectorPointerStart.current = null; inspectorGestureAxis.current = 'pending' }}
+            >
+              <button className="sticky-inspector-arrow previous" type="button" onClick={() => cycleInspector(-1)} aria-label="Previous Strategy">‹</button>
+              <div className="mobile-dialog-image"><CardFace kind="strategy" id={inspected.id} /></div>
+              <button className="sticky-inspector-arrow next" type="button" onClick={() => cycleInspector(1)} aria-label="Next Strategy">›</button>
+              <span className="sticky-inspector-count">{wrap(inspectedIndex, cards.length) + 1} of {cards.length}</span>
+            </div>
             <section>
               <span className={canPlay(player, inspected, bonuses) ? 'sticky-card-legal' : 'sticky-card-discard'}>{canPlay(player, inspected, bonuses) ? 'Playable now' : 'Discard only'}</span>
               <h2>{inspected.title}</h2>
               <p>{strategyText(inspected)}</p>
-              <button className="primary" onClick={() => { choose(inspected); setInspected(null) }}>
+              <button className="primary" onClick={() => { choose(inspected); setInspectedIndex(null) }}>
                 {player.selected === inspected.id ? 'Undo this choice' : canPlay(player, inspected, bonuses) ? 'Choose this Strategy' : 'Choose to discard'}
               </button>
             </section>
