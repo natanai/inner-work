@@ -1,11 +1,11 @@
 @media (max-width: 760px) {
-  .sticky-strategy-hand {
+  html[data-strategy-hand='docked'] .sticky-strategy-hand {
     position: fixed;
     z-index: 154;
     left: 0;
     right: 0;
     bottom: calc(54px + env(safe-area-inset-bottom));
-    height: 164px;
+    height: 186px;
     pointer-events: none;
   }
 
@@ -13,35 +13,81 @@
     z-index: 165;
   }
 
-  .mobile-tab-play {
-    padding-bottom: calc(238px + env(safe-area-inset-bottom));
+  html[data-strategy-hand='docked'] .mobile-tab-play {
+    padding-bottom: calc(258px + env(safe-area-inset-bottom));
   }
 
-  .mobile-tab-play .mobile-stage {
-    padding-bottom: 184px;
+  html[data-strategy-hand='docked'] .mobile-tab-play .mobile-stage {
+    padding-bottom: 204px;
   }
 
-  .mobile-tab-play .mobile-action-dock {
+  html[data-strategy-hand='docked'] .mobile-tab-play .mobile-action-dock {
     z-index: 172;
-    bottom: calc(188px + env(safe-area-inset-bottom));
+    bottom: calc(208px + env(safe-area-inset-bottom));
   }
 
-  .mobile-hand-section.true-stack-mounted {
-    min-height: 66px;
+  html[data-strategy-hand='docked'] .mobile-hand-section.true-stack-mounted {
+    min-height: 0;
     margin-top: 16px;
     padding: 0;
   }
 
-  .mobile-hand-section.true-stack-mounted::after {
-    content: 'Your Strategy hand is docked below.';
-    display: block;
-    padding: 14px 16px;
-    border: 1px dashed rgba(112, 67, 42, .28);
+  html[data-strategy-hand='undocked'] .mobile-hand-section.true-stack-mounted {
+    min-height: 0;
+    margin-top: 16px;
+    padding-bottom: 18px;
+  }
+
+  .hand-dock-preference {
+    order: -5;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin: 0 0 15px;
+    padding: 11px 12px;
+    border: 1px dashed rgba(112, 67, 42, .3);
     border-radius: 15px;
-    background: rgba(255, 249, 232, .56);
-    color: #76513d;
-    font-size: .68rem;
-    text-align: center;
+    background: rgba(255, 249, 232, .7);
+    color: #674633;
+    text-align: left;
+  }
+
+  .hand-dock-preference > div {
+    display: grid;
+    min-width: 0;
+  }
+
+  .hand-dock-preference span {
+    color: #9d5a40;
+    font-size: .53rem;
+    font-weight: 850;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .hand-dock-preference strong {
+    margin-top: 2px;
+    font-size: .72rem;
+    line-height: 1.2;
+  }
+
+  .hand-dock-preference button {
+    min-height: 38px;
+    padding: 7px 11px;
+    border: 1px solid rgba(81, 44, 31, .22);
+    border-radius: 999px;
+    background: #6c3428;
+    color: #fff2d3;
+    font-size: .64rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .hand-dock-preference.undocked {
+    border-style: solid;
+    background: #f1e2c1;
   }
 
   .sticky-hand-caption {
@@ -87,7 +133,7 @@
   .sticky-hand-fan {
     position: absolute;
     left: 50%;
-    bottom: -104px;
+    bottom: -82px;
     width: min(270px, 78vw);
     height: 246px;
     transform: translateX(-50%);
@@ -98,7 +144,7 @@
   .sticky-hand-card {
     position: absolute;
     left: 50%;
-    top: 46px;
+    top: 44px;
     width: min(148px, 38vw);
     padding: 0;
     transform-origin: 50% 100%;
@@ -172,18 +218,18 @@
   }
 
   @media (max-height: 720px) {
-    .sticky-strategy-hand {
-      height: 140px;
+    html[data-strategy-hand='docked'] .sticky-strategy-hand {
+      height: 158px;
     }
 
     .sticky-hand-fan {
-      bottom: -116px;
-      transform: translateX(-50%) scale(.88);
+      bottom: -96px;
+      transform: translateX(-50%) scale(.9);
       transform-origin: bottom center;
     }
 
-    .mobile-tab-play .mobile-action-dock {
-      bottom: calc(165px + env(safe-area-inset-bottom));
+    html[data-strategy-hand='docked'] .mobile-tab-play .mobile-action-dock {
+      bottom: calc(184px + env(safe-area-inset-bottom));
     }
   }
 }
