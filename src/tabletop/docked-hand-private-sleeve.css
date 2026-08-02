@@ -1,0 +1,144 @@
+@media (max-width: 760px) {
+  /* Keep only the useful position count; the cards already explain what the hand is. */
+  html[data-strategy-hand='docked'] .sticky-hand-caption {
+    left: 10px;
+    top: 3px;
+    display: block;
+    min-width: 0;
+    width: auto;
+    padding: 4px 8px;
+    transform: none;
+    border-radius: 999px;
+  }
+
+  html[data-strategy-hand='docked'] .sticky-hand-caption > span,
+  html[data-strategy-hand='docked'] .sticky-hand-caption > small {
+    display: none;
+  }
+
+  html[data-strategy-hand='docked'] .sticky-hand-caption > b {
+    display: block;
+    font-size: .62rem;
+    line-height: 1;
+  }
+
+  /* Pull the physical cards higher and slightly left, leaving a clear inventory lane. */
+  html[data-strategy-hand='docked'] .sticky-hand-fan {
+    left: 36%;
+    bottom: -68px;
+    width: min(250px, 66vw);
+    height: 246px;
+  }
+
+  html[data-strategy-hand='docked'] .sticky-hand-card {
+    top: 17px;
+    width: min(142px, 36vw);
+  }
+
+  /* On the Play tab, stack the bank vertically beside the hand instead of across it. */
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-inventory-bank {
+    left: auto;
+    right: 8px;
+    bottom: calc(57px + env(safe-area-inset-bottom));
+    grid-template-columns: 1fr;
+    gap: 2px;
+    width: 96px;
+    min-height: 0;
+    padding: 3px;
+    transform: none;
+    border-radius: 14px 14px 8px 8px;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-item {
+    grid-template-columns: 22px minmax(0, 1fr);
+    min-height: 33px;
+    padding: 2px 5px;
+    border-radius: 9px;
+    column-gap: 4px;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-item > span {
+    font-size: .4rem;
+    letter-spacing: .045em;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-item > strong {
+    font-size: .64rem;
+  }
+
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-group .gift-piece,
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-personal > b,
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-magnifier > svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  /* The face-down Need is a rectangular sleeve, not an oval display pod. */
+  .mobile-deal-private .card-back,
+  .mobile-private-card-frame > .card-back,
+  .private-back > .card-back,
+  .large-private.card-back {
+    position: relative;
+    overflow: hidden;
+    border: 2px solid #603126;
+    border-radius: 7px !important;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.2), transparent 42%),
+      repeating-linear-gradient(115deg, rgba(99,54,37,.055) 0 1px, transparent 1px 8px),
+      #e6d3a3;
+    box-shadow: 0 8px 16px rgba(46, 23, 16, .24), inset 0 0 0 3px rgba(255, 247, 216, .45);
+  }
+
+  .mobile-deal-private .card-back > img,
+  .mobile-private-card-frame > .card-back > img,
+  .private-back > .card-back > img,
+  .large-private.card-back > img {
+    opacity: 0;
+  }
+
+  .mobile-deal-private .card-back::before,
+  .mobile-private-card-frame > .card-back::before,
+  .private-back > .card-back::before,
+  .large-private.card-back::before {
+    content: '';
+    position: absolute;
+    inset: 7%;
+    border: 1px solid rgba(96, 49, 38, .46);
+    border-radius: 4px;
+    background: radial-gradient(circle at 50% 38%, rgba(255, 245, 204, .58), transparent 45%);
+  }
+
+  .mobile-deal-private .card-back::after,
+  .mobile-private-card-frame > .card-back::after,
+  .private-back > .card-back::after,
+  .large-private.card-back::after {
+    content: 'PRIVATE\A NEED';
+    position: absolute;
+    inset: 18% 11%;
+    display: grid;
+    place-items: center;
+    white-space: pre;
+    border-top: 1px solid rgba(96, 49, 38, .42);
+    border-bottom: 1px solid rgba(96, 49, 38, .42);
+    color: #663529;
+    font: 800 clamp(.45rem, 3.1vw, .8rem)/1.45 'DM Sans', sans-serif;
+    letter-spacing: .12em;
+    text-align: center;
+  }
+
+  .mobile-deal-private > span {
+    display: none;
+  }
+
+  @media (max-width: 360px) {
+    html[data-strategy-hand='docked'] .sticky-hand-fan {
+      left: 34%;
+      width: 236px;
+    }
+
+    body:has(.mobile-play-page.mobile-tab-play) .mobile-inventory-bank {
+      right: 6px;
+      width: 90px;
+    }
+  }
+}
