@@ -14,6 +14,7 @@ import './tabletop/private-choice-hand-stack.css'
 import './tabletop/mobile-hand-pager.css'
 import './tabletop/mobile-card-experience.css'
 import './tabletop/mobile-ux-declutter.css'
+import './tabletop/tactile-ux-pass.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
