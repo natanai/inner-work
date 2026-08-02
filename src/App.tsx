@@ -5,6 +5,7 @@ import { DealScreen } from './tabletop/DealScreen'
 import { MobileDealScreen } from './tabletop/MobileDealScreen'
 import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { PlayScreen } from './tabletop/PlayScreen'
+import { TradeDiscussionLayer } from './tabletop/TradeDiscussionLayer'
 import { continueRound, createGame, nextSituation, resolveRound, type GameState } from './tabletop/model'
 
 function usePhoneLayout(): boolean {
@@ -29,7 +30,7 @@ function usePhoneLayout(): boolean {
 function Home({ onStart }: { onStart: () => void }) {
   const [rules, setRules] = useState(false)
   return <main className="home-page"><section className="home-table">
-    <div className="home-copy"><span>A cooperative card game for one whole person</span><h1>Inner<br />Work</h1><p>Play as Cognition α alongside two hidden-hand NPCs. Draw a Situation, discover Needs, and choose Strategies that tend the shared psyche.</p><div><button className="primary" onClick={onStart}>Set up the table</button><button className="quiet" onClick={() => setRules(!rules)}>{rules ? 'Hide overview' : 'How it plays'}</button></div>{rules && <aside><strong>One turn at a time.</strong><p>Your Public Needs and Strategy hand are visible. NPC hands and all Private Needs stay facedown. Choose one Strategy; the NPCs choose secretly; all three reveal together.</p></aside>}</div>
+    <div className="home-copy"><span>A cooperative card game for one whole person</span><h1>Inner<br />Work</h1><p>Play as Cognition α alongside two hidden-hand NPCs. Discuss the Public Needs, trade Strategies, and coordinate a response to each Situation.</p><div><button className="primary" onClick={onStart}>Set up the table</button><button className="quiet" onClick={() => setRules(!rules)}>{rules ? 'Hide overview' : 'How it plays'}</button></div>{rules && <aside><strong>Cooperate without losing your private goals.</strong><p>Each Cognition may play a Strategy only when it tends its own Public Need or an active Bonus Need. Trade cards during Discussion, commit simultaneously, then reveal how each legal play also affects every matching Public and Private Need.</p></aside>}</div>
     <div className="home-cards"><CardBack kind="need" /><CardBack kind="strategy" /><CardBack kind="situation" /></div>
   </section></main>
 }
@@ -108,7 +109,9 @@ export default function App() {
   const handleNextSituation = () => prepare(nextSituation(game), 'deal')
   const handleEnd = () => setScreen('end')
 
-  return phone
+  const playScreen = phone
     ? <MobilePlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
     : <PlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
+
+  return <TradeDiscussionLayer game={game} onGameChange={setGame}>{playScreen}</TradeDiscussionLayer>
 }
