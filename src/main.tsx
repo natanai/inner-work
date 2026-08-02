@@ -24,6 +24,7 @@ import './tabletop/desktop-planning-bridge.css'
 import './tabletop/collective-story.css'
 import './tabletop/mobile-story-table.css'
 import './tabletop/situation-deck-orientation.css'
+import './tabletop/mobile-deal-bank-polish.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

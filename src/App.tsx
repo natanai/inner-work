@@ -4,6 +4,7 @@ import { preloadGameAssets } from './tabletop/cardAssets'
 import { DealScreen } from './tabletop/DealScreen'
 import { MobileCardExperienceLayer } from './tabletop/MobileCardExperienceLayer'
 import { MobileDealScreen } from './tabletop/MobileDealScreen'
+import { MobileInventoryBank } from './tabletop/MobileInventoryBank'
 import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { MobileStoryTable } from './tabletop/MobileStoryTable'
 import { PlayScreen } from './tabletop/PlayScreen'
@@ -132,6 +133,7 @@ export default function App() {
   return <TradeDiscussionLayer game={game} onGameChange={setGame}><>
     {playScreen}
     {!mobileStoryActive && <MobileCardExperienceLayer game={game} onGameChange={setGame} />}
+    {phone && !mobileStoryActive && <MobileInventoryBank game={game} />}
     {phone && game.phase === 'planning' && <StickyStrategyHand game={game} onGameChange={setGame} />}
     {!mobileStoryActive && <TactileExperienceLayer game={game} />}
   </></TradeDiscussionLayer>

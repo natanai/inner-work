@@ -1,8 +1,21 @@
-/* Situation cards are stored in a landscape deck even though the shared card-back asset is portrait. */
+/* Situation cards rest on the table as a landscape deck even though the shared back image is portrait. */
 .deck.deck-situation .card-back.situation-back {
-  width: 64px !important;
-  left: 15px !important;
-  top: 18px !important;
-  transform: rotate(90deg);
+  left: 1px !important;
+  top: 25px !important;
+  width: 91px !important;
+  height: 65px !important;
+  aspect-ratio: auto !important;
+  transform: none !important;
   transform-origin: 50% 50%;
+}
+
+.deck.deck-situation .card-back.situation-back > img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 65px !important;
+  height: 91px !important;
+  max-width: none;
+  transform: translate(-50%, -50%) rotate(90deg);
+  object-fit: cover;
 }
