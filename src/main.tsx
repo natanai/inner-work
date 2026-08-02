@@ -15,6 +15,8 @@ import './tabletop/mobile-hand-pager.css'
 import './tabletop/mobile-card-experience.css'
 import './tabletop/mobile-ux-declutter.css'
 import './tabletop/tactile-ux-pass.css'
+import './tabletop/sticky-strategy-hand.css'
+import './tabletop/sticky-strategy-hand-compat.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

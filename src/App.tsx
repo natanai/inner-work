@@ -7,6 +7,7 @@ import { MobileDealScreen } from './tabletop/MobileDealScreen'
 import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { PrivateNeedChoiceScreen } from './tabletop/PrivateNeedChoiceScreen'
+import { StickyStrategyHand } from './tabletop/StickyStrategyHand'
 import { TactileExperienceLayer } from './tabletop/TactileExperienceLayer'
 import { TradeDiscussionLayer } from './tabletop/TradeDiscussionLayer'
 import { choosePrivateNeed } from './tabletop/privateNeedChoice'
@@ -124,5 +125,5 @@ export default function App() {
     ? <MobilePlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
     : <PlayScreen game={game} onChange={handleChange} onNextSituation={handleNextSituation} onEnd={handleEnd} />
 
-  return <TradeDiscussionLayer game={game} onGameChange={setGame}><>{playScreen}<MobileCardExperienceLayer game={game} onGameChange={setGame} /><TactileExperienceLayer game={game} /></></TradeDiscussionLayer>
+  return <TradeDiscussionLayer game={game} onGameChange={setGame}><>{playScreen}<MobileCardExperienceLayer game={game} onGameChange={setGame} />{phone && <StickyStrategyHand game={game} onGameChange={setGame} />}<TactileExperienceLayer game={game} /></></TradeDiscussionLayer>
 }

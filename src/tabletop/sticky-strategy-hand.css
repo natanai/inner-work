@@ -1,0 +1,189 @@
+@media (max-width: 760px) {
+  .sticky-strategy-hand {
+    position: fixed;
+    z-index: 154;
+    left: 0;
+    right: 0;
+    bottom: calc(54px + env(safe-area-inset-bottom));
+    height: 164px;
+    pointer-events: none;
+  }
+
+  .mobile-bottom-nav {
+    z-index: 165;
+  }
+
+  .mobile-tab-play {
+    padding-bottom: calc(238px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-tab-play .mobile-stage {
+    padding-bottom: 184px;
+  }
+
+  .mobile-tab-play .mobile-action-dock {
+    z-index: 172;
+    bottom: calc(188px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-hand-section.true-stack-mounted {
+    min-height: 66px;
+    margin-top: 16px;
+    padding: 0;
+  }
+
+  .mobile-hand-section.true-stack-mounted::after {
+    content: 'Your Strategy hand is docked below.';
+    display: block;
+    padding: 14px 16px;
+    border: 1px dashed rgba(112, 67, 42, .28);
+    border-radius: 15px;
+    background: rgba(255, 249, 232, .56);
+    color: #76513d;
+    font-size: .68rem;
+    text-align: center;
+  }
+
+  .sticky-hand-caption {
+    position: absolute;
+    z-index: 8;
+    left: 50%;
+    top: 0;
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 1px 8px;
+    min-width: 190px;
+    padding: 7px 12px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255, 240, 204, .56);
+    border-radius: 15px 15px 8px 8px;
+    background: rgba(83, 39, 29, .96);
+    color: #fff1cf;
+    box-shadow: 0 8px 20px rgba(36, 17, 12, .26);
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+  }
+
+  .sticky-hand-caption span {
+    color: #efc968;
+    font-size: .57rem;
+    font-weight: 850;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .sticky-hand-caption b {
+    justify-self: end;
+    font-size: .67rem;
+  }
+
+  .sticky-hand-caption small {
+    grid-column: 1 / -1;
+    color: #ead9ba;
+    font-size: .53rem;
+  }
+
+  .sticky-hand-fan {
+    position: absolute;
+    left: 50%;
+    bottom: -104px;
+    width: min(270px, 78vw);
+    height: 246px;
+    transform: translateX(-50%);
+    touch-action: pan-y;
+    pointer-events: auto;
+  }
+
+  .sticky-hand-card {
+    position: absolute;
+    left: 50%;
+    top: 46px;
+    width: min(148px, 38vw);
+    padding: 0;
+    transform-origin: 50% 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: 0 9px 20px rgba(46, 21, 14, .28);
+    overflow: visible;
+    transition: transform .2s cubic-bezier(.2, .75, .24, 1), filter .18s ease, box-shadow .18s ease;
+  }
+
+  .sticky-hand-card .physical-card {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  .sticky-hand-card.rear {
+    filter: saturate(.85) brightness(.91);
+  }
+
+  .sticky-hand-card.front {
+    filter: none;
+    box-shadow: 0 12px 26px rgba(42, 18, 11, .38);
+  }
+
+  .sticky-hand-card.selected {
+    box-shadow: 0 0 0 4px rgba(238, 189, 57, .76), 0 12px 27px rgba(42, 18, 11, .4);
+  }
+
+  .sticky-card-chosen {
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    padding: 4px 8px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: #efbd3f;
+    color: #4c2b1d;
+    font-size: .52rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .sticky-hand-inspector {
+    z-index: 360;
+  }
+
+  .sticky-hand-inspector section > span {
+    display: inline-flex;
+    margin-bottom: 4px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: .55rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .sticky-card-legal {
+    background: #dbe9cf;
+    color: #35523b;
+  }
+
+  .sticky-card-discard {
+    background: #f1d1c6;
+    color: #7a3d31;
+  }
+
+  @media (max-height: 720px) {
+    .sticky-strategy-hand {
+      height: 140px;
+    }
+
+    .sticky-hand-fan {
+      bottom: -116px;
+      transform: translateX(-50%) scale(.88);
+      transform-origin: bottom center;
+    }
+
+    .mobile-tab-play .mobile-action-dock {
+      bottom: calc(165px + env(safe-area-inset-bottom));
+    }
+  }
+}

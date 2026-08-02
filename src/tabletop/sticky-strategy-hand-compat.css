@@ -1,0 +1,5 @@
+@media (max-width: 760px) {
+  .true-strategy-stack {
+    display: none !important;
+  }
+}
