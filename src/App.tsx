@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CardBack } from './tabletop/Cards'
 import { preloadGameAssets } from './tabletop/cardAssets'
 import { DealScreen } from './tabletop/DealScreen'
+import { MobileDealScreen } from './tabletop/MobileDealScreen'
 import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { continueRound, createGame, nextSituation, resolveRound, type GameState } from './tabletop/model'
@@ -88,7 +89,9 @@ export default function App() {
 
   if (!game || screen === 'home') return <Home onStart={start} />
   if (screen === 'loading') return <LoadingScreen game={game} onReady={() => setScreen(readyScreen)} />
-  if (screen === 'deal') return <DealScreen game={game} onDone={() => setScreen('play')} />
+  if (screen === 'deal') return phone
+    ? <MobileDealScreen game={game} onDone={() => setScreen('play')} />
+    : <DealScreen game={game} onDone={() => setScreen('play')} />
   if (screen === 'end') return <DayEnd game={game} onAgain={start} onHome={() => setScreen('home')} />
 
   const handleChange = (next: GameState) => {

@@ -7,7 +7,6 @@ import {
   CardFace,
   GiftIcon,
   Magnifier,
-  NeedCardOnTable,
   strategyText,
   type CardKind,
 } from './Cards'
@@ -41,19 +40,21 @@ function NeedChip({
   cognition,
   slot,
   highlighted,
+  expanded = false,
   onInspect,
 }: {
   cognition: Cognition
   slot: NeedSlot
   highlighted: boolean
+  expanded?: boolean
   onInspect: () => void
 }) {
   return (
-    <button className={`mobile-need-chip ${highlighted ? 'resolved' : ''}`} onClick={onInspect}>
+    <button className={`mobile-need-chip ${expanded ? 'expanded' : ''} ${highlighted ? 'resolved' : ''}`} onClick={onInspect}>
       <span className="mobile-cognition-symbol">{cognitionSymbol(cognition)}</span>
-      <span><small>{slot.card.feeling}</small><strong>{slot.card.need}</strong></span>
-      <span className="mobile-gift-count"><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} />{slot.gifts}</span>
-      {highlighted && <b>Tended</b>}
+      <span className="mobile-need-copy"><small>{slot.card.feeling}</small><strong>{slot.card.need}</strong></span>
+      <span className="mobile-gift-count"><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} /><b>{slot.gifts}</b></span>
+      {highlighted && <em>Tended this round</em>}
     </button>
   )
 }
@@ -116,6 +117,7 @@ function MobileHand({
                 aria-label={`Read ${card.title}`}
               >
                 <CardFace kind="strategy" id={card.id} />
+                <span>Tap to read full-size</span>
               </button>
               <div className="mobile-card-copy">
                 <span className={legal ? 'mobile-playable' : 'mobile-discard'}>{legal ? 'Playable' : 'Would be discarded'}</span>
@@ -157,6 +159,7 @@ function MobileReveal({
               onClick={() => onInspect({ kind: 'strategy', id: line.strategy.id, label: line.strategy.title, detail: strategyText(line.strategy) })}
             >
               <CardFace kind="strategy" id={line.strategy.id} />
+              <span>Tap to read full-size</span>
             </button>
             <div><span>{line.cognitionName}</span><h2>{line.strategy.title}</h2><strong>{line.legal ? `+${line.shared} shared · +${line.private} private` : 'Discarded'}</strong><p>{line.story}</p></div>
           </article>
@@ -165,10 +168,47 @@ function MobileReveal({
       {tended.size > 0 && (
         <div className="mobile-resolution-summary">
           <GiftIcon variation={1} />
-          <p><strong>Gifts were tended on:</strong><span>{[...tended].join(' · ')}</span></p>
+          <p><strong>Gift tokens were removed from:</strong><span>{[...tended].join(' · ')}</span></p>
         </div>
       )}
     </section>
+  )
+}
+
+function PrivateNeedStation({
+  cognition,
+  tended,
+  onInspect,
+  onReveal,
+}: {
+  cognition: Cognition
+  tended: boolean
+  onInspect: (card: InspectedCard) => void
+  onReveal: () => void
+}) {
+  const visible = cognition.human && cognition.privateVisible
+  return (
+    <div className="mobile-private-station">
+      <div className="mobile-private-card-frame">
+        {visible ? (
+          <button onClick={() => onInspect({
+            kind: 'need',
+            id: cognition.privateNeed.card.id,
+            label: `${cognition.privateNeed.card.feeling}: ${cognition.privateNeed.card.need}`,
+            detail: `${cognition.privateNeed.gifts} gifts remain.`,
+          })}>
+            <CardFace kind="need" id={cognition.privateNeed.card.id} />
+          </button>
+        ) : <CardBack kind="need" />}
+      </div>
+      <div className="mobile-private-copy">
+        <span>{visible ? cognition.privateNeed.card.feeling : 'Hidden'}</span>
+        <strong>{visible ? cognition.privateNeed.card.need : cognition.human ? 'Your Private Need' : 'Private Need'}</strong>
+        <p><GiftIcon variation={2} />{cognition.privateNeed.gifts} gift{cognition.privateNeed.gifts === 1 ? '' : 's'} remaining</p>
+        {tended && <em>Tended this round</em>}
+        {cognition.human && !visible && <Magnifier used={cognition.magnifierUsed} disabled={cognition.magnifierUsed} onClick={onReveal} />}
+      </div>
+    </div>
   )
 }
 
@@ -185,15 +225,17 @@ function MobileNeedsPanel({
 }) {
   return (
     <section className="mobile-reference-panel mobile-needs-panel">
-      <header><span>Needs in play</span><h1>What each Cognition is carrying</h1></header>
+      <header><span>Needs in play</span><h1>What each Cognition is carrying</h1><p>Tap any Public Need to read its complete card.</p></header>
       {game.cognitions.map((cognition) => (
         <article className="mobile-cognition-needs" key={cognition.id}>
           <div className="mobile-section-heading"><span>{cognition.human ? 'You' : 'NPC'}</span><strong>{cognition.name}</strong><small>{cognition.privateScore} private</small></div>
-          <div className="mobile-public-card-grid">
+          <div className="mobile-panel-need-list">
             {cognition.publicNeeds.map((slot) => (
-              <NeedCardOnTable
+              <NeedChip
                 key={slot.card.id}
+                cognition={cognition}
                 slot={slot}
+                expanded
                 highlighted={tendedNeeds.has(slot.card.need)}
                 onInspect={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}`, detail: `${slot.gifts} gifts remain.` })}
               />
@@ -201,18 +243,12 @@ function MobileNeedsPanel({
           </div>
           <div className="mobile-private-need">
             <span>Private Need</span>
-            {cognition.human ? (
-              <div>
-                {cognition.privateVisible ? (
-                  <NeedCardOnTable
-                    slot={cognition.privateNeed}
-                    highlighted={tendedNeeds.has(cognition.privateNeed.card.need)}
-                    onInspect={() => onInspect({ kind: 'need', id: cognition.privateNeed.card.id, label: `${cognition.privateNeed.card.feeling}: ${cognition.privateNeed.card.need}`, detail: `${cognition.privateNeed.gifts} gifts remain.` })}
-                  />
-                ) : <CardBack kind="need" />}
-                <Magnifier used={cognition.magnifierUsed} disabled={game.phase !== 'planning' || cognition.magnifierUsed} onClick={onRevealPrivate} />
-              </div>
-            ) : <CardBack kind="need" />}
+            <PrivateNeedStation
+              cognition={cognition}
+              tended={tendedNeeds.has(cognition.privateNeed.card.need)}
+              onInspect={onInspect}
+              onReveal={onRevealPrivate}
+            />
           </div>
         </article>
       ))}
@@ -286,13 +322,13 @@ export function MobilePlayScreen({
   })
 
   const actionLabel = game.phase === 'planning'
-    ? 'Reveal all Strategies'
+    ? 'Reveal Strategies'
     : game.phase === 'complete'
-      ? 'Draw the next Situation'
-      : 'Draw the next round'
+      ? 'Next Situation'
+      : 'Next round'
 
   return (
-    <main className="mobile-play-page">
+    <main className={`mobile-play-page mobile-tab-${tab}`}>
       <header className="mobile-game-header">
         <div><span>Situation {game.situationNumber} · Round {game.round}</span><strong>{game.situation.title}</strong></div>
         <div><b><GiftIcon variation={0} />{game.sharedScore}</b><button onClick={onEnd}>End</button></div>
@@ -307,6 +343,7 @@ export function MobilePlayScreen({
                 onClick={() => setInspected({ kind: 'situation', id: game.situation.id, label: game.situation.title })}
               >
                 <CardFace kind="situation" id={game.situation.id} />
+                <span>Tap the Situation to read it full-size</span>
               </button>
               <div className="mobile-npc-status"><span>{beta.name}: {beta.hand.length} hidden</span><i /><span>{gamma.name}: {gamma.hand.length} hidden</span></div>
             </section>
@@ -321,14 +358,16 @@ export function MobilePlayScreen({
         {tab === 'rules' && <MobileRulesPanel phase={game.phase} />}
       </div>
 
-      <div className="mobile-action-dock">
-        <div><span>{game.phase === 'planning' ? 'Your turn' : game.phase === 'complete' ? 'Situation complete' : 'Round resolved'}</span><strong>{game.phase === 'planning' ? alpha.selected ? 'Strategy chosen' : 'Choose one Strategy' : game.phase === 'complete' ? 'All Public Needs are tended' : 'Review the gift markers'}</strong></div>
-        <button
-          className="primary"
-          disabled={game.phase === 'planning' && !alpha.selected}
-          onClick={() => game.phase === 'complete' ? onNextSituation() : onChange(game)}
-        >{actionLabel}</button>
-      </div>
+      {tab === 'play' && (
+        <div className="mobile-action-dock">
+          <div><span>{game.phase === 'planning' ? 'Your turn' : game.phase === 'complete' ? 'Situation complete' : 'Round resolved'}</span><strong>{game.phase === 'planning' ? alpha.selected ? 'Strategy chosen' : 'Choose one Strategy' : game.phase === 'complete' ? 'All Public Needs are tended' : 'Review the gift markers'}</strong></div>
+          <button
+            className="primary"
+            disabled={game.phase === 'planning' && !alpha.selected}
+            onClick={() => game.phase === 'complete' ? onNextSituation() : onChange(game)}
+          >{actionLabel}</button>
+        </div>
+      )}
 
       <nav className="mobile-bottom-nav" aria-label="Game views">
         {(['play', 'needs', 'cognitions', 'rules'] as MobileTab[]).map((item) => (
@@ -340,9 +379,9 @@ export function MobilePlayScreen({
 
       {inspected && (
         <dialog open className="mobile-card-dialog" onClick={() => setInspected(null)} aria-label={inspected.label}>
-          <div onClick={(event) => event.stopPropagation()}>
+          <div className={`mobile-dialog-inner mobile-dialog-${inspected.kind}`} onClick={(event) => event.stopPropagation()}>
             <button className="mobile-dialog-close" onClick={() => setInspected(null)} aria-label="Close card">×</button>
-            <CardFace kind={inspected.kind} id={inspected.id} />
+            <div className="mobile-dialog-image"><CardFace kind={inspected.kind} id={inspected.id} /></div>
             <section><h2>{inspected.label}</h2>{inspected.detail && <p>{inspected.detail}</p>}<button className="primary" onClick={() => setInspected(null)}>Return to the table</button></section>
           </div>
         </dialog>
