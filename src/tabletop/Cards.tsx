@@ -1,23 +1,9 @@
 import type { CSSProperties } from 'react'
 import { needs, situations, strategies, type StrategyCard } from '../data/cards'
+import { cardBackUrl, cardFrontUrl, type CardKind } from './cardAssets'
 import type { NeedSlot } from './model'
 
-export type CardKind = 'strategy' | 'need' | 'situation'
-
-type Atlas = {
-  file: string
-  columns: number
-  rows: number
-  prefix: string
-}
-
-const BASE_URL = import.meta.env.BASE_URL
-
-const ATLASES: Record<CardKind, Atlas> = {
-  strategy: { file: 'strategies.avif', columns: 9, rows: 6, prefix: 'ST' },
-  need: { file: 'needs.avif', columns: 6, rows: 5, prefix: 'FN' },
-  situation: { file: 'situations.avif', columns: 5, rows: 5, prefix: 'S' },
-}
+export type { CardKind } from './cardAssets'
 
 function cardLabel(kind: CardKind, id: string): string | null {
   if (kind === 'strategy') return strategies.find((card) => card.id === id)?.title ?? null
@@ -26,28 +12,6 @@ function cardLabel(kind: CardKind, id: string): string | null {
     return card ? `${card.feeling}: ${card.need}` : null
   }
   return situations.find((card) => card.id === id)?.title ?? null
-}
-
-function atlasStyle(kind: CardKind, id: string): CSSProperties | null {
-  const atlas = ATLASES[kind]
-  if (!id.startsWith(atlas.prefix)) return null
-  const cardNumber = Number.parseInt(id.slice(atlas.prefix.length), 10)
-  if (!Number.isFinite(cardNumber) || cardNumber < 1) return null
-
-  const index = cardNumber - 1
-  const column = index % atlas.columns
-  const row = Math.floor(index / atlas.columns)
-  if (row >= atlas.rows) return null
-
-  const x = atlas.columns === 1 ? 0 : (column / (atlas.columns - 1)) * 100
-  const y = atlas.rows === 1 ? 0 : (row / (atlas.rows - 1)) * 100
-
-  return {
-    backgroundImage: `url(${BASE_URL}cards/${atlas.file})`,
-    backgroundSize: `${atlas.columns * 100}% ${atlas.rows * 100}%`,
-    backgroundPosition: `${x}% ${y}%`,
-    backgroundRepeat: 'no-repeat',
-  }
 }
 
 export function CardFace({
@@ -62,15 +26,16 @@ export function CardFace({
   style?: CSSProperties
 }) {
   const label = cardLabel(kind, id)
-  const sprite = atlasStyle(kind, id)
-  if (!label || !sprite) return null
+  if (!label) return null
 
   return (
-    <span
+    <img
       className={`physical-card full-card-front ${kind}-face ${className}`}
-      style={{ ...sprite, ...style }}
-      role="img"
-      aria-label={label}
+      style={style}
+      src={cardFrontUrl(kind, id)}
+      alt={label}
+      decoding="async"
+      draggable={false}
     />
   )
 }
@@ -84,10 +49,9 @@ export function CardBack({
   className?: string
   style?: CSSProperties
 }) {
-  const file = kind === 'strategy' ? 'strategy-back.avif' : kind === 'need' ? 'need-back.avif' : 'situation-back.avif'
   return (
     <span className={`physical-card card-back ${kind}-back ${className}`} style={style} aria-hidden="true">
-      <img src={`${BASE_URL}cards/${file}`} alt="" />
+      <img src={cardBackUrl(kind)} alt="" decoding="async" draggable={false} />
     </span>
   )
 }
@@ -130,6 +94,7 @@ export function NeedCardOnTable({
           {card}
         </button>
       ) : card}
+      <div className="card-readable-label"><span>{slot.card.feeling}</span><strong>{slot.card.need}</strong></div>
       <GiftPieces count={slot.gifts} />
     </div>
   )

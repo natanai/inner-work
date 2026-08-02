@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CardBack } from './tabletop/Cards'
+import { preloadGameAssets } from './tabletop/cardAssets'
 import { DealScreen } from './tabletop/DealScreen'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { continueRound, createGame, nextSituation, resolveRound, type GameState } from './tabletop/model'
@@ -12,6 +13,36 @@ function Home({ onStart }: { onStart: () => void }) {
   </section></main>
 }
 
+function LoadingScreen({ game, onReady }: { game: GameState; onReady: () => void }) {
+  const [progress, setProgress] = useState({ completed: 0, total: 1 })
+  const [error, setError] = useState<string | null>(null)
+  const percentage = Math.round((progress.completed / progress.total) * 100)
+  const key = useMemo(() => `${game.situation.id}-${game.round}-${game.cognitions.map((cognition) => cognition.hand.map((card) => card.id).join(',')).join('|')}`, [game])
+
+  useEffect(() => {
+    let active = true
+    setError(null)
+    preloadGameAssets(game, (completed, total) => {
+      if (active) setProgress({ completed, total: Math.max(total, 1) })
+    }).then(() => {
+      if (active) onReady()
+    }).catch((cause: unknown) => {
+      if (active) setError(cause instanceof Error ? cause.message : 'The card library could not be prepared.')
+    })
+    return () => { active = false }
+  }, [key])
+
+  return <main className="loading-page"><section className="loading-table">
+    <div className="loading-decks" aria-hidden="true"><CardBack kind="need" /><CardBack kind="situation" /><CardBack kind="strategy" /></div>
+    <span className="caption">Preparing the table</span>
+    <h1>Shuffling the full-size cards…</h1>
+    <p>The game is loading only the cards needed for this deal. The rest of the library will wait until it is needed.</p>
+    <div className="loading-progress" aria-label={`${percentage}% loaded`}><i style={{ width: `${percentage}%` }} /></div>
+    <strong>{error ? 'A card could not be loaded.' : `${progress.completed} of ${progress.total} cards ready`}</strong>
+    {error && <><small>{error}</small><button className="primary" onClick={() => window.location.reload()}>Try again</button></>}
+  </section></main>
+}
+
 function DayEnd({ game, onAgain, onHome }: { game: GameState; onAgain: () => void; onHome: () => void }) {
   const scores = game.cognitions.map((cognition) => cognition.privateScore)
   const highest = Math.max(...scores)
@@ -19,15 +50,35 @@ function DayEnd({ game, onAgain, onHome }: { game: GameState; onAgain: () => voi
   return <main className="end-page"><section><span>The table is cleared</span><h1>What did the whole psyche receive?</h1><div className="end-scores"><article><b>{game.sharedScore}</b><span>shared gifts</span></article><article><b>{game.situationNumber}</b><span>situations</span></article><article><b>{balance}%</b><span>balance</span></article></div><div className="cognition-scores">{game.cognitions.map((cognition) => <p key={cognition.id}><span>{cognition.name}</span><b>{cognition.privateScore} private</b></p>)}</div><div><button className="primary" onClick={onAgain}>Play another day</button><button className="quiet" onClick={onHome}>Home</button></div></section></main>
 }
 
+type Screen = 'home' | 'loading' | 'deal' | 'play' | 'end'
+type ReadyScreen = 'deal' | 'play'
+
 export default function App() {
-  const [screen, setScreen] = useState<'home' | 'deal' | 'play' | 'end'>('home')
+  const [screen, setScreen] = useState<Screen>('home')
+  const [readyScreen, setReadyScreen] = useState<ReadyScreen>('deal')
   const [game, setGame] = useState<GameState | null>(null)
-  const start = () => { setGame(createGame()); setScreen('deal') }
+
+  const prepare = (nextGame: GameState, destination: ReadyScreen) => {
+    setGame(nextGame)
+    setReadyScreen(destination)
+    setScreen('loading')
+  }
+  const start = () => prepare(createGame(), 'deal')
+
   if (!game || screen === 'home') return <Home onStart={start} />
+  if (screen === 'loading') return <LoadingScreen game={game} onReady={() => setScreen(readyScreen)} />
   if (screen === 'deal') return <DealScreen game={game} onDone={() => setScreen('play')} />
   if (screen === 'end') return <DayEnd game={game} onAgain={start} onHome={() => setScreen('home')} />
+
   return <PlayScreen game={game} onChange={(next) => {
-    if (next === game) setGame(game.phase === 'planning' ? resolveRound(game) : continueRound(game))
-    else setGame(next)
-  }} onNextSituation={() => { setGame(nextSituation(game)); setScreen('deal') }} onEnd={() => setScreen('end')} />
+    if (next !== game) {
+      setGame(next)
+      return
+    }
+    if (game.phase === 'planning') {
+      setGame(resolveRound(game))
+      return
+    }
+    prepare(continueRound(game), 'play')
+  }} onNextSituation={() => prepare(nextSituation(game), 'deal')} onEnd={() => setScreen('end')} />
 }
