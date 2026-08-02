@@ -5,6 +5,7 @@ import './tabletop/base.css'
 import './tabletop/table.css'
 import './tabletop/responsive.css'
 import './card-fronts.css'
+import './high-resolution-cards.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
