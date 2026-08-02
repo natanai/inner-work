@@ -14,9 +14,9 @@ type Atlas = {
 const BASE_URL = import.meta.env.BASE_URL
 
 const ATLASES: Record<CardKind, Atlas> = {
-  strategy: { file: 'strategies.webp', columns: 9, rows: 6, prefix: 'ST' },
-  need: { file: 'needs.webp', columns: 6, rows: 5, prefix: 'FN' },
-  situation: { file: 'situations.webp', columns: 5, rows: 5, prefix: 'S' },
+  strategy: { file: 'strategies.avif', columns: 9, rows: 6, prefix: 'ST' },
+  need: { file: 'needs.avif', columns: 6, rows: 5, prefix: 'FN' },
+  situation: { file: 'situations.avif', columns: 5, rows: 5, prefix: 'S' },
 }
 
 function cardLabel(kind: CardKind, id: string): string | null {
@@ -84,7 +84,7 @@ export function CardBack({
   className?: string
   style?: CSSProperties
 }) {
-  const file = kind === 'strategy' ? 'strategy-back.webp' : kind === 'need' ? 'need-back.webp' : 'situation-back.webp'
+  const file = kind === 'strategy' ? 'strategy-back.avif' : kind === 'need' ? 'need-back.avif' : 'situation-back.avif'
   return (
     <span className={`physical-card card-back ${kind}-back ${className}`} style={style} aria-hidden="true">
       <img src={`${BASE_URL}cards/${file}`} alt="" />
