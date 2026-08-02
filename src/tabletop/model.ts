@@ -429,7 +429,7 @@ export function resolveRound(game: GameState): GameState {
     })
   }
 
-  const resolution: Resolution[] = selected.flatMap(({ actor, strategy }) => {
+  const resolutionByCognition: Resolution[] = selected.flatMap(({ actor, strategy }) => {
     if (!strategy) return []
     const legal = canPlay(actor, strategy, bonusesBefore)
     const effects = effectsFor(strategy, game.situation).filter((effect) => effect.amount > 0)
@@ -455,6 +455,10 @@ export function resolveRound(game: GameState): GameState {
         : `${actor.name} could not bring “${strategy.title}” into the shared action because it did not tend one of that Cognition’s own Public Needs or an active Bonus Need. The card was discarded.`,
     }]
   })
+  const resolution = [
+    ...resolutionByCognition.filter((line) => line.cognitionId !== 'alpha'),
+    ...resolutionByCognition.filter((line) => line.cognitionId === 'alpha'),
+  ]
 
   const complete = cognitions.every((cognition) => cognition.publicNeeds.every((slot) => slot.gifts === 0))
   const sharedAfter = game.sharedScore + sharedEarned
