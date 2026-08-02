@@ -102,7 +102,7 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
             const visibleOrder = Math.min(order, offsets.length - 1)
             const style: CSSProperties = {
               zIndex: front ? cards.length + 2 : cards.length - visibleOrder,
-              transform: `translateX(${offsets[visibleOrder]}px) translateY(${front ? 0 : 8 + visibleOrder * 3}px) rotate(${front ? 0 : offsets[visibleOrder] / 24}deg) scale(${front ? 1 : .94 - visibleOrder * .015})`,
+              transform: `translateX(calc(-50% + ${offsets[visibleOrder]}px)) translateY(${front ? 0 : 8 + visibleOrder * 3}px) rotate(${front ? 0 : offsets[visibleOrder] / 24}deg) scale(${front ? 1 : .94 - visibleOrder * .015})`,
             }
             return (
               <button
