@@ -12,6 +12,7 @@ import './tabletop/situation-needs-flow.css'
 import './tabletop/trading.css'
 import './tabletop/private-choice-hand-stack.css'
 import './tabletop/mobile-hand-pager.css'
+import './tabletop/mobile-card-experience.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
