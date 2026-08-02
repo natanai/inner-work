@@ -209,8 +209,8 @@ function MatchList({ line }: { line: Resolution }) {
       {line.publicMatches.length > 0 && <p><span>Required Public Needs</span><strong>{line.publicMatches.join(' · ')}</strong></p>}
       {line.privateMatches.length > 0 && <p><span>Private Needs</span><strong>{line.privateMatches.length} hidden Need{line.privateMatches.length === 1 ? '' : 's'} also tended</strong></p>}
       {line.bonusMatches.length > 0 && <p><span>Active Bonus Needs</span><strong>{line.bonusMatches.join(' · ')}</strong></p>}
-      {line.bonusCreated.length > 0 && <p className="created"><span>Created for next round</span><strong>{line.bonusCreated.map((bonus) => bonus.need).join(' · ')}</strong></p>}
-      {line.publicMatches.length === 0 && line.privateMatches.length === 0 && line.bonusMatches.length === 0 && <p><span>Result</span><strong>This Strategy is discarded.</strong></p>}
+      {line.bonusCreated.length > 0 && <p className="created"><span>Introduced by this shared action</span><strong>{line.bonusCreated.map((bonus) => `${bonus.need} · available next round`).join(' · ')}</strong></p>}
+      {line.publicMatches.length === 0 && line.privateMatches.length === 0 && line.bonusMatches.length === 0 && line.bonusCreated.length === 0 && <p><span>Result</span><strong>This Strategy is discarded.</strong></p>}
     </div>
   )
 }
@@ -218,7 +218,7 @@ function MatchList({ line }: { line: Resolution }) {
 function RevealOverview({ lines }: { lines: Resolution[] }) {
   return (
     <section className="story-reveal-overview">
-      <header><span>Simultaneous reveal</span><h1>All three Strategies turn over together.</h1><p>They were committed at the same time. We will now slow down and hear each Cognition’s story one at a time.</p></header>
+      <header><span>Simultaneous reveal</span><h1>Three parts influenced one shared person.</h1><p>The Strategies were committed together. We will now hear what each Cognition brought forward, what the person did, and what that action tended across the whole psyche.</p></header>
       <div>{lines.map((line) => <article key={line.cognitionId}><CardFace kind="strategy" id={line.strategy.id} /><strong>{line.cognitionName}</strong></article>)}</div>
     </section>
   )
@@ -238,20 +238,29 @@ function StoryStep({
   onInspect: (card: InspectedCard) => void
 }) {
   const human = line.cognitionId === 'alpha'
+  const [showExample, setShowExample] = useState(false)
+  const introduced = line.bonusCreated.map((bonus) => bonus.need)
   return (
-    <section className="story-step">
-      <header><span>Story {index + 1} of 3</span><h1>{line.cognitionName} uses “{line.strategy.title}”</h1></header>
+    <section className="story-step collective-mobile-story-step">
+      <header><span>Story {index + 1} of 3</span><h1>{line.cognitionName} influenced one shared action</h1></header>
       <button className="story-card" onClick={() => onInspect({ kind: 'strategy', id: line.strategy.id, label: line.strategy.title, detail: strategyText(line.strategy) })}>
         <CardFace kind="strategy" id={line.strategy.id} />
       </button>
       <div className="story-copy">
         {human ? (
           <>
-            <label htmlFor="human-story">How might you use this Strategy in the current Situation?</label>
-            <textarea id="human-story" value={humanStory} onChange={(event) => setHumanStory(event.target.value)} placeholder="A sentence is enough. You may also continue without writing one." />
-            <button className="quiet" onClick={() => setHumanStory(line.story)}>Use the suggested story</button>
+            <p className="collective-mobile-story-rule">Keep the Cognition as the source of motivation and the whole person as the one who actually performs the Strategy.</p>
+            <div className="collective-mobile-story-cues">
+              <p><b>Motivation</b><span>What Need did {line.cognitionName} bring forward?</span></p>
+              <p><b>Shared action</b><span>What did the person actually do?</span></p>
+              <p><b>Wider effect</b><span>What else was tended{introduced.length ? `, and how was ${introduced.join(' and ')} introduced as a Bonus Need` : ''}?</span></p>
+            </div>
+            <label htmlFor="human-story">Tell the shared-person story in your own words.</label>
+            <textarea id="human-story" value={humanStory} onChange={(event) => setHumanStory(event.target.value)} placeholder={`${line.cognitionName} brought forward… The shared person chose to… It also…`} />
+            <button className="quiet" onClick={() => setShowExample((visible) => !visible)}>{showExample ? 'Hide example' : 'See an example'}</button>
+            {showExample && <aside className="collective-mobile-story-example"><p>{line.story}</p><button className="quiet" onClick={() => setHumanStory(line.story)}>Use as a starting point</button></aside>}
           </>
-        ) : <p>{line.story}</p>}
+        ) : <p className="collective-mobile-story-npc">{line.story}</p>}
         <MatchList line={line} />
       </div>
     </section>
@@ -269,7 +278,7 @@ function RoundSummary({ game }: { game: GameState }) {
       {changed.length > 0 && <div className="summary-list"><strong>Required Needs tended</strong>{changed.map((change) => <p key={change.key}><span>{change.cognitionName} · {change.need}</span><b>{change.before} → {change.after}</b></p>)}</div>}
       {ledger.privateAwards.length > 0 && <div className="summary-list"><strong>Private points</strong>{ledger.privateAwards.map((award) => <p key={`${award.cognitionId}-${award.need}`}><span>{award.cognitionName}</span><b>+{award.points}</b></p>)}</div>}
       {ledger.bonusAwards.length > 0 && <div className="summary-list bonus"><strong>Bonus points</strong>{ledger.bonusAwards.map((award) => <p key={award.bonusId}><span>{award.cognitionNames.join(' & ')} · {award.need}</span><b>+{award.pointsEach} each</b></p>)}</div>}
-      {ledger.bonusCreated.length > 0 && <div className="summary-list created"><strong>Bonus Needs arriving next round</strong>{ledger.bonusCreated.map((bonus) => <p key={bonus.id}><span>{bonus.need} · from {bonus.sourceStrategyTitle}</span><b><GiftIcon variation={1} />{bonus.gifts}</b></p>)}</div>}
+      {ledger.bonusCreated.length > 0 && <div className="summary-list created"><strong>Bonus Needs arriving next round</strong>{ledger.bonusCreated.map((bonus) => <p key={bonus.id}><span>{bonus.need} · introduced when {bonus.sourceCognitionName} brought forward {bonus.sourceStrategyTitle}</span><b><GiftIcon variation={1} />{bonus.gifts}</b></p>)}</div>}
       {ledger.publicRemoved === 0 && ledger.privateAwards.length === 0 && ledger.bonusAwards.length === 0 && <p className="mobile-reference-note">No gifts moved this round.</p>}
     </section>
   )
@@ -290,7 +299,8 @@ function MobileRevealFlow({
 }) {
   if (step === 0) return <RevealOverview lines={game.resolution} />
   if (step <= game.resolution.length) {
-    return <StoryStep line={game.resolution[step - 1]} index={step - 1} humanStory={humanStory} setHumanStory={setHumanStory} onInspect={onInspect} />
+    const line = game.resolution[step - 1]
+    return <StoryStep key={line.cognitionId} line={line} index={step - 1} humanStory={humanStory} setHumanStory={setHumanStory} onInspect={onInspect} />
   }
   return <RoundSummary game={game} />
 }
@@ -374,7 +384,7 @@ function MobileRulesPanel({ phase }: { phase: GameState['phase'] }) {
       <ol>
         <li><b>The Situation establishes context.</b><span>It adds gifts to matching Public Needs and may double Needs with a particular feeling.</span></li>
         <li><b>Required Public Needs drive play.</b><span>All of their gifts must be tended before the next Situation begins.</span></li>
-        <li><b>Strategies reveal simultaneously.</b><span>Then each Cognition describes how its Strategy happens in the Situation.</span></li>
+        <li><b>Strategies reveal simultaneously.</b><span>Then each Cognition explains what it brought forward and how the one shared person acted.</span></li>
         <li><b>Public gifts enter the group bank.</b><span>Private and Bonus gifts become individual points. Bonus Needs never block the next Situation.</span></li>
       </ol>
       <p className="mobile-reference-note">A Strategy may be played when it tends at least one of that Cognition’s unresolved Public Needs or an active Bonus Need. Its full strength applies to every matching Need.</p>
