@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { CardFace, GiftIcon } from './Cards'
+import { CardBack, CardFace, GiftIcon } from './Cards'
 import type { Cognition, GameState } from './model'
 import { analyzeStrategy, applyTrade, generateTradeProposals, type StrategyAnalysis, type TradeProposal } from './trading'
 
@@ -177,6 +177,7 @@ function useMobilePlanningTarget(): { target: HTMLElement | null; phone: boolean
 
 export function TradeDiscussionLayer({ game, onGameChange, children }: { game: GameState; onGameChange: (game: GameState) => void; children: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const [privateConfirmOpen, setPrivateConfirmOpen] = useState(false)
   const [privateReviewOpen, setPrivateReviewOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const proposals = useMemo(() => generateTradeProposals(game), [game])
@@ -188,9 +189,18 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
     setNotice(`Trade complete: you received “${proposal.npcGives.title}.”`)
   }
 
-  const reviewPrivate = () => {
+  const requestPrivateReview = () => {
     if (!player || player.magnifierUsed || game.phase !== 'planning') return
     setOpen(false)
+    setPrivateConfirmOpen(true)
+  }
+
+  const confirmPrivateReview = () => {
+    if (!player || player.magnifierUsed || game.phase !== 'planning') {
+      setPrivateConfirmOpen(false)
+      return
+    }
+    setPrivateConfirmOpen(false)
     onGameChange({
       ...game,
       cognitions: game.cognitions.map((cognition) => cognition.id === player.id
@@ -213,10 +223,14 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
   }
 
   useEffect(() => {
-    const handleReview = () => reviewPrivate()
+    const handleReview = () => requestPrivateReview()
     window.addEventListener('inner-work:review-private', handleReview)
     return () => window.removeEventListener('inner-work:review-private', handleReview)
   }, [game, player])
+
+  useEffect(() => {
+    if (game.phase !== 'planning' || player?.magnifierUsed) setPrivateConfirmOpen(false)
+  }, [game.phase, player?.magnifierUsed])
 
   const launch = game.phase === 'planning' ? (
     <button className={`discussion-launch ${phone ? 'discussion-launch-in-flow' : ''}`} onClick={() => setOpen(true)}>
@@ -245,7 +259,7 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
 
             {notice && <p className="trade-notice">{notice}</p>}
             <OwnershipBoard game={game} />
-            <PrivateGoal game={game} onReview={reviewPrivate} />
+            <PrivateGoal game={game} onReview={requestPrivateReview} />
 
             <section className="discussion-section trade-room">
               <header><span>Suggested trades</span><h2>{proposals.length > 0 ? 'Useful swaps available' : 'No useful swap right now'}</h2></header>
@@ -257,6 +271,24 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
             <HandPlanner game={game} />
             <footer><button className="primary" onClick={() => setOpen(false)}>Return to your hand</button></footer>
           </div>
+        </dialog>
+      )}
+
+      {privateConfirmOpen && player && (
+        <dialog open className="private-review-dialog private-review-confirm-dialog" onClick={() => setPrivateConfirmOpen(false)} aria-label="Confirm magnifying glass use">
+          <section onClick={(event) => event.stopPropagation()}>
+            <span>Magnifying glass · one use this Situation</span>
+            <h1>Review your Private Need?</h1>
+            <p>Confirming will spend the magnifying glass for this Situation. You can look at the card now, but it returns face down when you close the review.</p>
+            <div className="private-confirm-card"><CardBack kind="need" className="large-private" /></div>
+            <InfoDisclosure label="What the magnifier does">
+              <p>It lets you review the Private Need you chose during setup. You may use it only once during each Situation.</p>
+            </InfoDisclosure>
+            <footer className="private-confirm-actions">
+              <button className="quiet" onClick={() => setPrivateConfirmOpen(false)}>Not yet</button>
+              <button className="primary" onClick={confirmPrivateReview}>Use magnifying glass</button>
+            </footer>
+          </section>
         </dialog>
       )}
 
