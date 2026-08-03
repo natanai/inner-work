@@ -92,7 +92,7 @@ function ChoicePathSummary({ game }: { game: GameState }) {
   const bonuses = game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round)
   const legal = player.hand.filter((card) => canPlay(player, card, bonuses)).length
   const trades = distinctDirectedTradePaths(game)
-  const magnifier = player.magnifierUsed ? 0 : 4
+  const magnifier: number = player.magnifierUsed ? 0 : 4
   const total = legal + trades + magnifier
   return (
     <aside className="choice-path-summary" aria-label={`${total} currently available planning paths`}>
