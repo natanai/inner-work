@@ -28,11 +28,27 @@ export function CardFace({
 }) {
   const label = cardLabel(kind, id)
   if (!label) return null
-  const special = kind === 'strategy' && id.startsWith('SA')
+  const strategy = kind === 'strategy' ? strategyCardById(id) : null
+
+  if (strategy && isSpecialAction(strategy)) {
+    return (
+      <article
+        className={`physical-card full-card-front strategy-face special-action-face special-${strategy.id.toLowerCase()} ${className}`}
+        style={style}
+        aria-label={`${strategy.title}. ${specialActionSummary(strategy)}`}
+      >
+        <span>Special Action</span>
+        <b aria-hidden="true">✦</b>
+        <strong>{strategy.title}</strong>
+        <p>{specialActionSummary(strategy)}</p>
+        <small>{strategy.id}</small>
+      </article>
+    )
+  }
 
   return (
     <img
-      className={`physical-card full-card-front ${kind}-face ${special ? 'special-action-face' : ''} ${className}`}
+      className={`physical-card full-card-front ${kind}-face ${className}`}
       style={style}
       src={cardFrontUrl(kind, id)}
       alt={label}
