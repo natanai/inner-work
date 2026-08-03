@@ -31,6 +31,7 @@ import './tabletop/cognition-identity.css'
 import './tabletop/choice-support.css'
 import './tabletop/special-actions.css'
 import './tabletop/special-choice-summary.css'
+import './tabletop/special-action-story.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
