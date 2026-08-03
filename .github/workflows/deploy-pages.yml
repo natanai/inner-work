@@ -29,6 +29,8 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+      - name: Analyze meaningful choices
+        run: npm run analyze:choices
       - name: Configure Pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
