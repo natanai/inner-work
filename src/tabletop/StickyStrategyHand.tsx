@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { StrategyCard } from '../data/cards'
 import { CardFace, strategyText } from './Cards'
 import { canPlay, type GameState } from './model'
-import { StrategyContributionDetails } from './StrategyContributionDetails'
+import { StrategyContributionDetails, StrategyQuickSummary } from './StrategyContributionDetails'
 
 type GestureAxis = 'pending' | 'horizontal' | 'vertical'
 type HandMode = 'docked' | 'undocked'
@@ -241,10 +241,13 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
               <span className="sticky-inspector-count">{wrap(inspectedIndex, cards.length) + 1} of {cards.length}</span>
             </div>
             <section>
-              <span className={canPlay(player, inspected, bonuses) ? 'sticky-card-legal' : 'sticky-card-discard'}>{canPlay(player, inspected, bonuses) ? 'Playable now' : 'Discard only'}</span>
+              <StrategyQuickSummary game={game} cognition={player} card={inspected} />
               <h2>{inspected.title}</h2>
               <p>{strategyText(inspected)}</p>
-              <StrategyContributionDetails game={game} cognition={player} card={inspected} />
+              <details className="strategy-contribution-disclosure">
+                <summary>More contribution details</summary>
+                <StrategyContributionDetails game={game} cognition={player} card={inspected} compact />
+              </details>
               <button className="primary" onClick={() => { choose(inspected); setInspectedIndex(null) }}>
                 {player.selected === inspected.id ? 'Undo this choice' : canPlay(player, inspected, bonuses) ? 'Choose this Strategy' : 'Choose to discard'}
               </button>
