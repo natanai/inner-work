@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { CardFace, GiftIcon, strategyText } from './Cards'
+import { cognitionDisplay } from './cognitionIdentity'
 import type { GameState, Resolution } from './model'
 import { bonusOriginPhrase, nvcStory, strategyActionPhrase } from './storyNarrative'
 
@@ -34,9 +35,9 @@ function RevealMoment({ game }: { game: GameState }) {
       </header>
       <div className="desktop-story-reveal-cards">
         {game.resolution.map((line, index) => (
-          <article key={line.cognitionId} style={{ '--story-order': index } as CSSProperties}>
+          <article className={`owner-${line.cognitionId}`} key={line.cognitionId} style={{ '--story-order': index } as CSSProperties}>
             <CardFace kind="strategy" id={line.strategy.id} />
-            <strong>{line.cognitionName}</strong>
+            <strong>{cognitionDisplay(line.cognitionId)}</strong>
           </article>
         ))}
       </div>
@@ -44,14 +45,7 @@ function RevealMoment({ game }: { game: GameState }) {
   )
 }
 
-function StoryMoment({
-  game,
-  line,
-  index,
-  humanStory,
-  setHumanStory,
-  onInspectStrategy,
-}: {
+function StoryMoment({ game, line, index, humanStory, setHumanStory, onInspectStrategy }: {
   game: GameState
   line: Resolution
   index: number
@@ -65,7 +59,7 @@ function StoryMoment({
   const generatedStory = nvcStory(game, line)
 
   return (
-    <section className="desktop-story-turn">
+    <section className={`desktop-story-turn owner-${line.cognitionId}`}>
       <div className="desktop-story-context">
         <span>Current Situation</span>
         <div><CardFace kind="situation" id={game.situation.id} /></div>
@@ -75,7 +69,7 @@ function StoryMoment({
         <CardFace kind="strategy" id={line.strategy.id} />
       </button>
       <div className="desktop-story-reflection">
-        <span>Story {index + 1} of 3 · {line.cognitionName}</span>
+        <span>Story {index + 1} of 3 · {cognitionDisplay(line.cognitionId)}</span>
         <h1>Which Needs motivated this shared action?</h1>
         <p className="desktop-story-theme">In NVC, behavior is understood as an attempt to meet underlying Needs. A Cognition carries part of that motivation; the one shared person performs the Strategy.</p>
         {human ? (
@@ -122,11 +116,11 @@ function RoundSummary({ game }: { game: GameState }) {
       <div className="desktop-story-summary-grid">
         <article>
           <h2>Public Needs tended</h2>
-          {changed.length > 0 ? changed.map((change) => <p key={change.key}><span>{change.cognitionName} · {change.need}</span><b>{change.before} → {change.after}</b></p>) : <p><span>No Public gifts moved.</span></p>}
+          {changed.length > 0 ? changed.map((change) => <p key={change.key}><span>{cognitionDisplay(change.cognitionId)} · {change.need}</span><b>{change.before} → {change.after}</b></p>) : <p><span>No Public gifts moved.</span></p>}
         </article>
         <article>
           <h2>Individual points</h2>
-          {ledger.privateAwards.map((award) => <p key={`${award.cognitionId}-${award.need}`}><span>{award.cognitionName} · Private</span><b>+{award.points}</b></p>)}
+          {ledger.privateAwards.map((award) => <p key={`${award.cognitionId}-${award.need}`}><span>{cognitionDisplay(award.cognitionId)} · Private</span><b>+{award.points}</b></p>)}
           {ledger.bonusAwards.map((award) => <p key={award.bonusId}><span>{award.cognitionNames.join(' & ')} · {award.need}</span><b>+{award.pointsEach} each</b></p>)}
           {ledger.privateAwards.length === 0 && ledger.bonusAwards.length === 0 && <p><span>No individual gifts moved.</span></p>}
         </article>
