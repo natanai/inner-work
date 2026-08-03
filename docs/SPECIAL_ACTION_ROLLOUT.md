@@ -4,34 +4,36 @@ The complete Special Action engine is retained in the repository, but Special Ac
 
 This is an intentional safety gate after the initial all-at-once implementation touched too many interacting systems at once. The ordinary 54-card Strategy deck remains the production behavior until each Special Action passes independently.
 
-## Enabling cards in a test build
+## Enabling one card on a test branch
 
-Use a comma-separated Vite environment variable:
+`src/tabletop/specialActions.ts` contains an explicit rollout list:
 
-```bash
-VITE_SPECIAL_ACTIONS=SA5 npm run build
+```ts
+export const enabledSpecialActionIds: readonly SpecialActionId[] = []
 ```
 
-More than one card may be enabled only after each card has already passed alone:
+A card-specific test branch may add exactly one ID:
 
-```bash
-VITE_SPECIAL_ACTIONS=SA5,SA6 npm run build
+```ts
+export const enabledSpecialActionIds: readonly SpecialActionId[] = ['SA5']
 ```
 
-Production must omit `VITE_SPECIAL_ACTIONS` until the rollout checklist explicitly approves a card.
+The list on `main` remains empty until that card’s isolated pull request has passed and its behavior has been reviewed. Runtime flags are deliberately not supported, so production cannot activate a card accidentally through deployment configuration.
 
 ## Required test sequence
 
 Each Special Action receives its own pull request and must pass:
 
 1. TypeScript and Vite production build.
-2. Ordinary-game regression check with the rollout gate empty.
+2. Ordinary-game regression check with the rollout list empty.
 3. Deal/refill check: hands remain four total cards.
 4. Selection check on mobile docked, mobile undocked, and desktop hands.
 5. Resolution check for the card’s exact written rule.
 6. Story Table check: the Special Action is shown before the paired Strategy.
 7. Hidden-information check when Private Needs are involved.
 8. Next-round and next-Situation state check.
+
+The card-specific branch must contain only the minimum engine, interface, test, and documentation changes needed for that one card.
 
 ## Rollout order
 
