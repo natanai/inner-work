@@ -19,11 +19,10 @@ export const specialStrategyCards: SpecialActionCard[] = specialActions.map((car
 /**
  * Production rollout gate.
  *
- * Keep this list empty on main until a Special Action has passed its own
- * isolated pull request. A test branch may add exactly one ID while validating
- * that card. This deliberately avoids runtime flags and accidental activation.
+ * This branch validates Effective Communication in isolation. No other Special
+ * Action may enter a hand through this build.
  */
-export const enabledSpecialActionIds: readonly SpecialActionId[] = []
+export const enabledSpecialActionIds: readonly SpecialActionId[] = ['SA5']
 export const enabledSpecialStrategyCards = specialStrategyCards.filter((card) => enabledSpecialActionIds.includes(card.id))
 
 /** Cards that may actually be shuffled into a new game in this build. */

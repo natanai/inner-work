@@ -10,7 +10,8 @@
     "prebuild": "npm run assets",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "analyze:choices": "node scripts/analyze-choice-floor.mjs"
+    "analyze:choices": "node scripts/analyze-choice-floor.mjs",
+    "test:sa5": "node scripts/sa5-engine-check.mjs"
   },
   "dependencies": {
     "react": "19.2.8",
