@@ -11,7 +11,6 @@ function eventNote(eventStrength: number): string {
 }
 
 function PublicContribution({ match, qualification }: { match: PublicMatch; qualification: boolean }) {
-  const capped = match.strength > match.remaining
   return (
     <article className={`strategy-contribution-row public owner-${match.cognitionId}`}>
       <header>
@@ -20,9 +19,7 @@ function PublicContribution({ match, qualification }: { match: PublicMatch; qual
       </header>
       <strong>{match.feeling}: {match.need}</strong>
       <p>
-        {capped
-          ? `Can tend the remaining ${gifts(match.gifts)}; the +${match.strength} effect is capped because only ${gifts(match.remaining)} remain.`
-          : `Can tend ${gifts(match.gifts)} of the ${gifts(match.remaining)} currently remaining.`}
+        Adds +{match.strength} toward this Public Need. With {gifts(match.remaining)} currently remaining, this effect can account for up to {gifts(match.gifts)} when the three legal Strategies are combined.
         {eventNote(match.eventStrength)}
       </p>
     </article>
@@ -35,7 +32,7 @@ function BonusContribution({ bonus }: { bonus: BonusMatch }) {
       <header><span>Qualifies the play · Active Bonus Need</span><b>+{bonus.strength} {bonus.need}</b></header>
       <strong>{bonus.need}</strong>
       <p>
-        This matching active Bonus Need makes the Strategy legal. The strongest matching play can receive up to {gifts(bonus.contribution)} of the {gifts(bonus.gifts)} currently on it.
+        This matching active Bonus Need makes the Strategy legal. Any play tied for the strongest {bonus.need} effect can receive up to {gifts(bonus.contribution)} of the {gifts(bonus.gifts)} currently on it.
         {eventNote(bonus.eventStrength)}
       </p>
     </article>
