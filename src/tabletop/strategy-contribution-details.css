@@ -1,137 +1,88 @@
-.strategy-contribution-details {
-  display: grid;
-  gap: 12px;
-  width: 100%;
-  margin-top: 12px;
-  color: #553426;
-}
-
-.strategy-contribution-heading {
-  display: grid;
-  gap: 3px;
-  padding: 11px 13px;
-  border: 1px solid rgba(92, 53, 38, .14);
-  border-radius: 15px;
-  background: rgba(255, 249, 229, .72);
-}
-
-.strategy-contribution-heading > span,
-.strategy-contribution-group > h3,
-.strategy-contribution-row header > span {
-  color: #a55d45;
-  font-size: .68rem;
-  font-weight: 850;
-  letter-spacing: .07em;
-  line-height: 1.15;
-  text-transform: uppercase;
-}
-
-.strategy-contribution-heading > strong {
-  font-size: .92rem;
-  line-height: 1.32;
-}
-
-.strategy-contribution-details.playable .strategy-contribution-heading {
-  border-color: rgba(66, 111, 71, .22);
-  background: rgba(218, 237, 211, .76);
-}
-
-.strategy-contribution-details.playable .strategy-contribution-heading > span {
-  color: #3f7147;
-}
-
-.strategy-contribution-group {
-  display: grid;
-  gap: 8px;
-}
-
-.strategy-contribution-group > h3 {
-  margin: 2px 2px 0;
-}
-
-.strategy-contribution-row {
+.strategy-quick-summary {
   display: grid;
   gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid rgba(91, 52, 37, .13);
-  border-radius: 13px;
-  background: rgba(255, 252, 239, .8);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #4d3328;
+  list-style: none;
+}
+
+.strategy-quick-summary li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  margin: 0;
+  padding: 5px 9px 5px 6px;
+  border: 1px solid rgba(78, 50, 36, .12);
+  border-radius: 10px;
+  background: rgba(255, 250, 235, .82);
+  font-size: .76rem;
+  line-height: 1.2;
   text-align: left;
 }
 
-.strategy-contribution-row header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.strategy-quick-summary li.qualifies {
+  border-color: rgba(70, 111, 71, .25);
+  background: rgba(222, 238, 213, .82);
 }
 
-.strategy-contribution-row header > b {
-  flex: 0 0 auto;
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: #efe0b8;
-  color: #64392b;
-  font-size: .68rem;
-  line-height: 1;
-}
-
-.strategy-contribution-row > strong {
-  font: 750 1rem/1.15 'Fraunces', serif;
-}
-
-.strategy-contribution-row > p {
-  margin: 0;
-  color: #755242;
-  font-size: .78rem;
-  line-height: 1.38;
-}
-
-.strategy-contribution-row.bonus {
-  border-color: rgba(165, 119, 41, .24);
-  background: rgba(248, 232, 181, .64);
-}
-
-.strategy-contribution-row.created {
+.strategy-quick-summary li.creates {
   border-style: dashed;
-  border-color: rgba(139, 91, 31, .32);
-  background: rgba(245, 223, 167, .48);
+  border-color: rgba(171, 120, 39, .3);
+  background: rgba(249, 231, 174, .72);
 }
 
-.strategy-contribution-empty {
-  margin: 0;
-  padding: 11px 12px;
-  border: 1px dashed rgba(93, 54, 39, .24);
-  border-radius: 13px;
-  color: #765346;
-  font-size: .8rem;
+.strategy-quick-summary li span {
+  min-width: 0;
 }
 
-.strategy-contribution-details.compact {
-  gap: 8px;
-  margin-top: 8px;
+.strategy-quick-summary li strong {
+  font-weight: 850;
 }
 
-.strategy-contribution-details.compact .strategy-contribution-heading {
-  padding: 8px 9px;
-  border-radius: 11px;
+.strategy-quick-summary li em {
+  min-width: 30px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .66);
+  color: #5d382b;
+  font-size: .68rem;
+  font-style: normal;
+  font-weight: 900;
+  text-align: center;
 }
 
-.strategy-contribution-details.compact .strategy-contribution-heading > strong {
-  font-size: .76rem;
+.strategy-cognition-token,
+.strategy-bonus-token {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff9e9;
+  font: 800 .78rem/1 'Fraunces', serif;
 }
 
-.strategy-contribution-details.compact .strategy-contribution-row {
-  padding: 8px 9px;
+.strategy-bonus-token {
+  background: #b9842f;
+  color: #fff8df;
+  font-family: inherit;
+}
+
+.strategy-quick-discard {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
   border-radius: 10px;
-}
-
-.strategy-contribution-details.compact .strategy-contribution-row > strong {
-  font-size: .86rem;
-}
-
-.strategy-contribution-details.compact .strategy-contribution-row > p {
-  font-size: .69rem;
+  background: #eadbc7;
+  color: #70483a;
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: left;
 }
 
 .strategy-contribution-disclosure {
@@ -141,8 +92,8 @@
 }
 
 .strategy-contribution-disclosure > summary {
-  padding: 8px 1px 2px;
-  color: #7a4938;
+  padding: 9px 1px 3px;
+  color: #754838;
   font-size: .72rem;
   font-weight: 850;
   cursor: pointer;
@@ -162,22 +113,141 @@
   content: '−';
 }
 
+.strategy-contribution-details {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  color: #553426;
+}
+
+.strategy-detail-group {
+  display: grid;
+  gap: 4px;
+}
+
+.strategy-detail-group > h3 {
+  margin: 0;
+  color: #9a5b43;
+  font-size: .61rem;
+  font-weight: 900;
+  letter-spacing: .075em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.strategy-detail-group > ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strategy-detail-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 1px 7px;
+  align-items: center;
+  min-height: 38px;
+  padding: 5px 7px;
+  border: 1px solid rgba(91, 52, 37, .12);
+  border-radius: 9px;
+  background: rgba(255, 252, 239, .78);
+}
+
+.strategy-detail-row > span {
+  display: grid;
+  min-width: 0;
+}
+
+.strategy-detail-row > span > strong {
+  overflow: hidden;
+  font-size: .78rem;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strategy-detail-row > span > small {
+  overflow: hidden;
+  color: #876355;
+  font-size: .58rem;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strategy-detail-row > b:not(.strategy-cognition-token):not(.strategy-bonus-token) {
+  min-width: 28px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: #efe0b8;
+  color: #623a2d;
+  font-size: .65rem;
+  text-align: center;
+}
+
+.strategy-detail-row > em {
+  grid-column: 2 / 4;
+  color: #846456;
+  font-size: .57rem;
+  font-style: normal;
+}
+
+.strategy-detail-row > i {
+  grid-column: 2 / 4;
+  color: #a0643d;
+  font-size: .55rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.strategy-detail-row.bonus,
+.strategy-detail-row.created {
+  background: rgba(248, 232, 181, .58);
+}
+
+.strategy-detail-row.created {
+  border-style: dashed;
+}
+
+.strategy-contribution-empty {
+  margin: 0;
+  padding: 8px 9px;
+  border: 1px dashed rgba(93, 54, 39, .23);
+  border-radius: 9px;
+  color: #765346;
+  font-size: .7rem;
+  line-height: 1.3;
+}
+
+.strategy-contribution-details.compact {
+  gap: 7px;
+}
+
+.strategy-contribution-details.compact .strategy-detail-row {
+  min-height: 34px;
+  padding-block: 4px;
+}
+
 /* Older planner hints could expose a remembered Private match. Strategy guidance never does. */
 .private-opportunity {
   display: none !important;
 }
 
 @media (max-width: 760px) {
-  .mobile-dialog-strategy > section .strategy-contribution-details {
-    margin-top: 13px;
+  .mobile-dialog-strategy > section > .strategy-quick-summary,
+  .true-card-inspector .strategy-quick-summary {
+    margin-top: 7px;
   }
 
-  .mobile-dialog-strategy > section .strategy-contribution-row header {
-    align-items: flex-start;
+  .mobile-dialog-strategy > section .strategy-contribution-disclosure {
+    margin-bottom: 10px;
   }
 
-  .true-stack-copy .strategy-contribution-disclosure,
-  .mobile-hand-card .strategy-contribution-disclosure {
-    margin-top: 9px;
+  .true-stack-copy .strategy-quick-summary,
+  .mobile-hand-card .strategy-quick-summary {
+    margin-top: 8px;
   }
 }
