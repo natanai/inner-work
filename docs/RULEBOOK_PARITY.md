@@ -23,18 +23,18 @@ This document is intentionally stricter than a feature list: visual similarity d
 | A Strategy is legal only if it tends the acting Cognition’s Public Need or an active Bonus Need | Aligned | Private matches do not independently make a normal Strategy legal. Special Action exceptions are not active in the production deck during staged rollout. |
 | Trade any number of cards | Implemented as sequential exchanges | Players may initiate exchanges by asking for a Need and may complete any number of one-for-one exchanges before committing. NPC hands remain hidden except for the specifically offered return card. |
 | Use a Magnifying Glass once per Situation | Aligned | The token is spent only after a confirmed action succeeds. |
-| Magnifier: replace any number of Strategy cards | Implemented | Select one through four cards and draw the same number. When a test build enables Special Actions, those cards may also be replaced. |
+| Magnifier: replace any number of Strategy cards | Implemented | Select one through four cards and draw the same number. When a test branch enables a Special Action, that card may also be replaced. |
 | Magnifier: replace one of your Public Needs with two new Public Needs | Implemented literally | One Public Need leaves play and two newly drawn Public Needs enter, each receiving the current Situation setup. |
 | Magnifier: with permission, replace another player’s Public Need with two new Public Needs | Implemented for solo NPCs | The NPC grants permission when the replacements create at least as many connections with its hidden hand. A declined request does not spend the token. |
 | Magnifier: review the Private Need | Aligned through the unified menu | The card returns face down after review. |
 | If no Strategy can be played, discard one | Aligned | The Story Table frames it as a Strategy that did not tend a qualifying Need. |
-| Commit face down and reveal simultaneously | Aligned digitally | The app holds choices until reveal. The paired Special Action commitment format remains dormant unless a test build enables a card. |
+| Commit face down and reveal simultaneously | Aligned digitally | The app holds choices until reveal. The paired Special Action commitment format remains dormant unless a test branch enables a card. |
 
 ## Special Actions
 
 The repository contains the full seven-card engine and presentation work, but **production does not currently shuffle Special Actions into games**. This safety gate avoids treating a broad integrated build as validated simply because it compiles.
 
-Each card is activated only in an isolated test build through `VITE_SPECIAL_ACTIONS`, following `docs/SPECIAL_ACTION_ROLLOUT.md`.
+Each card is activated only on an isolated test branch by adding exactly one ID to `enabledSpecialActionIds`, following `docs/SPECIAL_ACTION_ROLLOUT.md`.
 
 | Special Action | Engine behavior retained for isolated validation | Production status |
 |---|---|---|
@@ -89,7 +89,7 @@ The production app currently counts paths from:
 - the four Magnifier action categories while the token is unused;
 - a required discard when no ordinary Strategy is legal.
 
-Special Action paths are included only in explicitly enabled test builds.
+Special Action paths are included only on explicitly enabled test branches.
 
 Run the development simulator with:
 
