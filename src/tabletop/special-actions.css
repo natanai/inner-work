@@ -1,0 +1,232 @@
+.special-action-face {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  align-items: center;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+  padding: 8% 7%;
+  border: 3px solid #4f2a22;
+  border-radius: 3px;
+  background:
+    radial-gradient(circle at 70% 18%, rgba(255,255,255,.55), transparent 22%),
+    linear-gradient(145deg, #f2d990 0%, #f8edc8 52%, #d9b16b 100%);
+  color: #4e2a22;
+  text-align: center;
+  box-shadow: inset 0 0 0 5px rgba(255,250,226,.65);
+}
+
+.special-action-face > span {
+  align-self: start;
+  font: 850 clamp(.42rem, 1.2vw, .72rem)/1.1 'DM Sans', sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.special-action-face > b {
+  font-size: clamp(2rem, 7vw, 4.8rem);
+  line-height: .9;
+}
+
+.special-action-face > strong {
+  align-self: end;
+  font: 800 clamp(.85rem, 2.6vw, 1.8rem)/1.02 'Fraunces', serif;
+}
+
+.special-action-face > p {
+  margin: 7% 0 0;
+  font: 650 clamp(.42rem, 1.15vw, .72rem)/1.25 'DM Sans', sans-serif;
+}
+
+.special-action-face > small {
+  justify-self: end;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.special-action-dialog {
+  position: fixed;
+  z-index: 1700;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(43, 20, 15, .72);
+  color: #513126;
+}
+
+.special-action-dialog::backdrop { background: rgba(43, 20, 15, .72); }
+
+.special-action-dialog > section {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(980px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: 16px auto;
+  overflow: hidden;
+  border: 1px solid rgba(80, 43, 31, .2);
+  border-radius: 26px;
+  background: #fff8e5;
+  box-shadow: 0 26px 80px rgba(30, 12, 8, .42);
+}
+
+.special-action-dialog > section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(89, 50, 36, .13);
+}
+
+.special-action-dialog header span {
+  color: #a35e43;
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.special-action-dialog h1 {
+  margin: 3px 0 0;
+  font: 800 clamp(1.6rem, 4vw, 3rem)/1 'Fraunces', serif;
+}
+
+.special-action-dialog header > button {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  background: #713326;
+  color: #fff8df;
+  font-size: 1.8rem;
+}
+
+.special-action-layout {
+  display: grid;
+  grid-template-columns: minmax(210px, 300px) minmax(0, 1fr);
+  gap: 28px;
+  overflow: auto;
+  padding: 24px;
+}
+
+.special-action-card { align-self: start; }
+.special-action-copy { display: grid; align-content: start; gap: 18px; }
+.special-action-copy > p { margin: 0; font-size: 1.08rem; line-height: 1.5; }
+.special-action-copy > aside {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 15px;
+  background: #f1dfb4;
+}
+.special-action-copy > aside span { line-height: 1.4; }
+.special-action-copy fieldset { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; }
+.special-action-copy legend { margin-bottom: 8px; font: 780 1.1rem/1.2 'Fraunces', serif; }
+
+.special-target-grid,
+.special-boost-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.special-target-grid > button,
+.special-boost-grid > button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 70px;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: #f6ead0;
+  color: #513126;
+  text-align: left;
+}
+
+.special-target-grid > button.selected,
+.special-boost-grid > button.selected {
+  border-color: #7e3b2d;
+  background: #ead3a4;
+  box-shadow: 0 0 0 3px rgba(126, 59, 45, .12);
+}
+
+.special-target-grid > button > b {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--cognition-color, #7b4031);
+  color: #fff9e8;
+}
+
+.special-target-grid small,
+.special-target-grid strong { display: block; }
+.special-target-grid em { display: flex; align-items: center; gap: 3px; font-style: normal; font-weight: 850; }
+.special-target-grid .gift-piece { width: 24px; height: 24px; }
+
+.special-boost-grid > button { grid-template-columns: 1fr auto; }
+.special-boost-grid > button span { font-weight: 800; }
+
+.special-action-warning,
+.special-action-privacy,
+.special-action-timing,
+.special-paired-card {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: #f4e8cb;
+  line-height: 1.4;
+}
+.special-action-warning { background: #f3d9cc; }
+
+.special-action-dialog > section > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(89, 50, 36, .13);
+  background: #fff8e5;
+}
+
+.special-action-dialog footer button { min-height: 50px; padding-inline: 22px; }
+
+.special-action-committed {
+  position: absolute;
+  z-index: 8;
+  inset: auto 5% 4%;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: #713326;
+  color: #fff1c8;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .special-action-dialog > section {
+    width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .special-action-dialog > section > header { padding: calc(14px + env(safe-area-inset-top)) 16px 14px; }
+  .special-action-dialog header > button { width: 46px; height: 46px; }
+  .special-action-layout { grid-template-columns: 1fr; gap: 18px; padding: 18px 16px; }
+  .special-action-card { width: min(310px, 72vw); justify-self: center; }
+  .special-target-grid { grid-template-columns: 1fr; }
+  .special-action-dialog > section > footer { display: grid; grid-template-columns: 1fr; padding-inline: 16px; }
+  .special-action-dialog footer .quiet { order: 2; }
+}
