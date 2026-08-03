@@ -4,9 +4,25 @@ import type { BonusNeed, Cognition, CognitionId, GameState } from './model'
 export type PublicMatch = {
   cognitionId: CognitionId
   cognitionName: string
+  feeling: string
   need: string
   gifts: number
+  remaining: number
+  strength: number
+  eventStrength: number
   own: boolean
+}
+
+export type BonusMatch = BonusNeed & {
+  contribution: number
+  strength: number
+  eventStrength: number
+}
+
+export type CreatedBonusEffect = {
+  need: string
+  gifts: number
+  eventGifts: number
 }
 
 export type StrategyAnalysis = {
@@ -14,7 +30,8 @@ export type StrategyAnalysis = {
   playable: boolean
   ownPublic: PublicMatch[]
   otherPublic: PublicMatch[]
-  bonusNeeds: BonusNeed[]
+  bonusNeeds: BonusMatch[]
+  createdBonuses: CreatedBonusEffect[]
   tendsOwnPrivate: boolean
   privatePotential: number
   groupPotential: number
@@ -41,10 +58,36 @@ function effectsFor(game: GameState, card: StrategyCard) {
   return game.situation.event ? [...card.effects, ...card.eventEffects] : card.effects
 }
 
-function strengthFor(game: GameState, card: StrategyCard, need: string): number {
-  return effectsFor(game, card)
+function effectStrength(game: GameState, card: StrategyCard, need: string): { strength: number; eventStrength: number } {
+  const standard = card.effects
     .filter((effect) => effect.need === need && effect.amount > 0)
     .reduce((total, effect) => total + effect.amount, 0)
+  const eventStrength = game.situation.event
+    ? card.eventEffects
+      .filter((effect) => effect.need === need && effect.amount > 0)
+      .reduce((total, effect) => total + effect.amount, 0)
+    : 0
+  return { strength: standard + eventStrength, eventStrength }
+}
+
+function strengthFor(game: GameState, card: StrategyCard, need: string): number {
+  return effectStrength(game, card, need).strength
+}
+
+function createdBonusEffects(game: GameState, card: StrategyCard): CreatedBonusEffect[] {
+  const grouped = new Map<string, CreatedBonusEffect>()
+  const add = (need: string, amount: number, event: boolean) => {
+    if (amount >= 0) return
+    const gifts = Math.abs(amount)
+    const current = grouped.get(need) ?? { need, gifts: 0, eventGifts: 0 }
+    current.gifts += gifts
+    if (event) current.eventGifts += gifts
+    grouped.set(need, current)
+  }
+
+  card.effects.forEach((effect) => add(effect.need, effect.amount, false))
+  if (game.situation.event) card.eventEffects.forEach((effect) => add(effect.need, effect.amount, true))
+  return [...grouped.values()]
 }
 
 function activeBonuses(game: GameState): BonusNeed[] {
@@ -53,12 +96,17 @@ function activeBonuses(game: GameState): BonusNeed[] {
 
 function publicMatches(game: GameState, card: StrategyCard): PublicMatch[] {
   return game.cognitions.flatMap((cognition) => cognition.publicNeeds.flatMap((slot) => {
-    if (slot.gifts <= 0 || strengthFor(game, card, slot.card.need) <= 0) return []
+    const { strength, eventStrength } = effectStrength(game, card, slot.card.need)
+    if (slot.gifts <= 0 || strength <= 0) return []
     return [{
       cognitionId: cognition.id,
       cognitionName: cognition.name,
+      feeling: slot.card.feeling,
       need: slot.card.need,
-      gifts: Math.min(slot.gifts, strengthFor(game, card, slot.card.need)),
+      gifts: Math.min(slot.gifts, strength),
+      remaining: slot.gifts,
+      strength,
+      eventStrength,
       own: false,
     }]
   }))
@@ -68,12 +116,16 @@ export function analyzeStrategy(game: GameState, cognition: Cognition, card: Str
   const matches = publicMatches(game, card).map((match) => ({ ...match, own: match.cognitionId === cognition.id }))
   const ownPublic = matches.filter((match) => match.own)
   const otherPublic = matches.filter((match) => !match.own)
-  const bonuses = activeBonuses(game).filter((bonus) => strengthFor(game, card, bonus.need) > 0)
+  const bonuses: BonusMatch[] = activeBonuses(game).flatMap((bonus) => {
+    const { strength, eventStrength } = effectStrength(game, card, bonus.need)
+    if (strength <= 0) return []
+    return [{ ...bonus, contribution: Math.min(bonus.gifts, strength), strength, eventStrength }]
+  })
   const privateStrength = strengthFor(game, card, cognition.privateNeed.card.need)
   const privatePotential = cognition.privateNeed.gifts > 0 ? Math.min(cognition.privateNeed.gifts, privateStrength) : 0
   const visiblePrivatePotential = cognition.human && !cognition.privateVisible ? 0 : privatePotential
   const groupPotential = matches.reduce((total, match) => total + match.gifts, 0)
-  const bonusPotential = bonuses.reduce((total, bonus) => total + Math.min(bonus.gifts, strengthFor(game, card, bonus.need)), 0)
+  const bonusPotential = bonuses.reduce((total, bonus) => total + bonus.contribution, 0)
   const ownPotential = ownPublic.reduce((total, match) => total + match.gifts, 0)
   const playable = ownPublic.length > 0 || bonuses.length > 0
 
@@ -94,6 +146,7 @@ export function analyzeStrategy(game: GameState, cognition: Cognition, card: Str
     ownPublic,
     otherPublic,
     bonusNeeds: bonuses,
+    createdBonuses: createdBonusEffects(game, card),
     tendsOwnPrivate: privatePotential > 0,
     privatePotential,
     groupPotential,
