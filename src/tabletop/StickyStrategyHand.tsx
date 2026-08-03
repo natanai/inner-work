@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { StrategyCard } from '../data/cards'
 import { CardFace, strategyText } from './Cards'
 import { canPlay, type GameState } from './model'
+import { StrategyContributionDetails } from './StrategyContributionDetails'
 
 type GestureAxis = 'pending' | 'horizontal' | 'vertical'
 type HandMode = 'docked' | 'undocked'
@@ -243,6 +244,7 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
               <span className={canPlay(player, inspected, bonuses) ? 'sticky-card-legal' : 'sticky-card-discard'}>{canPlay(player, inspected, bonuses) ? 'Playable now' : 'Discard only'}</span>
               <h2>{inspected.title}</h2>
               <p>{strategyText(inspected)}</p>
+              <StrategyContributionDetails game={game} cognition={player} card={inspected} />
               <button className="primary" onClick={() => { choose(inspected); setInspectedIndex(null) }}>
                 {player.selected === inspected.id ? 'Undo this choice' : canPlay(player, inspected, bonuses) ? 'Choose this Strategy' : 'Choose to discard'}
               </button>
