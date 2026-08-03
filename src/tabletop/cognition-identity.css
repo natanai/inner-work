@@ -102,16 +102,34 @@
 }
 
 .mobile-story-reveal-cards button.owner-alpha > strong,
-.mobile-story-turn.owner-alpha > header > span {
-  color: var(--cognition-alpha);
+.mobile-story-turn.owner-alpha > header > span,
+.desktop-story-reveal-cards article.owner-alpha > strong,
+.desktop-story-turn.owner-alpha .desktop-story-reflection > span {
+  color: var(--cognition-alpha) !important;
 }
 
 .mobile-story-reveal-cards button.owner-beta > strong,
-.mobile-story-turn.owner-beta > header > span {
-  color: var(--cognition-beta);
+.mobile-story-turn.owner-beta > header > span,
+.desktop-story-reveal-cards article.owner-beta > strong,
+.desktop-story-turn.owner-beta .desktop-story-reflection > span {
+  color: var(--cognition-beta) !important;
 }
 
 .mobile-story-reveal-cards button.owner-gamma > strong,
-.mobile-story-turn.owner-gamma > header > span {
-  color: var(--cognition-gamma);
+.mobile-story-turn.owner-gamma > header > span,
+.desktop-story-reveal-cards article.owner-gamma > strong,
+.desktop-story-turn.owner-gamma .desktop-story-reflection > span {
+  color: var(--cognition-gamma) !important;
+}
+
+.mobile-needs-panel > .mobile-cognition-needs:nth-of-type(1) .mobile-section-heading {
+  border-left: 4px solid var(--cognition-alpha);
+}
+
+.mobile-needs-panel > .mobile-cognition-needs:nth-of-type(2) .mobile-section-heading {
+  border-left: 4px solid var(--cognition-beta);
+}
+
+.mobile-needs-panel > .mobile-cognition-needs:nth-of-type(3) .mobile-section-heading {
+  border-left: 4px solid var(--cognition-gamma);
 }
