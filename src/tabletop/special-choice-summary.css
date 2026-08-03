@@ -1,0 +1,14 @@
+.trade-room > .choice-path-summary:not(.special-choice-summary) {
+  display: none;
+}
+
+.special-choice-summary > p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  align-items: center;
+}
+
+.special-choice-summary > p > b {
+  margin-right: -7px;
+}
