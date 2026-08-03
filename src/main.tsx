@@ -29,6 +29,7 @@ import './tabletop/docked-hand-private-sleeve.css'
 import './tabletop/strategy-contribution-details.css'
 import './tabletop/cognition-identity.css'
 import './tabletop/choice-support.css'
+import './tabletop/special-actions.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
