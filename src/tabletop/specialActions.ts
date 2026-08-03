@@ -16,7 +16,21 @@ export const specialStrategyCards: SpecialActionCard[] = specialActions.map((car
   specialAction: true,
 }))
 
-export const allStrategyCards: StrategyCard[] = [...strategies, ...specialStrategyCards]
+/**
+ * Production rollout gate.
+ *
+ * Keep this list empty on main until a Special Action has passed its own
+ * isolated pull request. A test branch may add exactly one ID while validating
+ * that card. This deliberately avoids runtime flags and accidental activation.
+ */
+export const enabledSpecialActionIds: readonly SpecialActionId[] = []
+export const enabledSpecialStrategyCards = specialStrategyCards.filter((card) => enabledSpecialActionIds.includes(card.id))
+
+/** Cards that may actually be shuffled into a new game in this build. */
+export const allStrategyCards: StrategyCard[] = [...strategies, ...enabledSpecialStrategyCards]
+
+/** Full catalog retained for rendering archived games and isolated tests. */
+export const completeStrategyCatalog: StrategyCard[] = [...strategies, ...specialStrategyCards]
 
 export function isSpecialAction(card: StrategyCard | null | undefined): card is SpecialActionCard {
   return Boolean(card && card.id.startsWith('SA'))
@@ -29,7 +43,7 @@ export function specialActionById(id: string | null | undefined): SpecialActionC
 
 export function strategyCardById(id: string | null | undefined): StrategyCard | null {
   if (!id) return null
-  return allStrategyCards.find((card) => card.id === id) ?? null
+  return completeStrategyCatalog.find((card) => card.id === id) ?? null
 }
 
 export function specialActionSummary(card: SpecialActionCard): string {
