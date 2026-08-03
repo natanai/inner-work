@@ -16,7 +16,33 @@ export const specialStrategyCards: SpecialActionCard[] = specialActions.map((car
   specialAction: true,
 }))
 
-export const allStrategyCards: StrategyCard[] = [...strategies, ...specialStrategyCards]
+const validIds = new Set<SpecialActionId>(specialStrategyCards.map((card) => card.id))
+
+function configuredSpecialActionIds(): SpecialActionId[] {
+  const configured = import.meta.env.VITE_SPECIAL_ACTIONS ?? ''
+  return [...new Set(configured
+    .split(',')
+    .map((value) => value.trim().toUpperCase())
+    .filter((value): value is SpecialActionId => validIds.has(value as SpecialActionId)))]
+}
+
+/**
+ * Safety gate for the staged Special Action rollout.
+ *
+ * Production has no VITE_SPECIAL_ACTIONS value, so the ordinary 54-card deck
+ * remains active while each Special Action is tested in isolation. A test build
+ * may opt in to one or more cards with, for example:
+ *
+ *   VITE_SPECIAL_ACTIONS=SA5 npm run build
+ */
+export const enabledSpecialActionIds = configuredSpecialActionIds()
+export const enabledSpecialStrategyCards = specialStrategyCards.filter((card) => enabledSpecialActionIds.includes(card.id))
+
+/** Cards that may actually be shuffled into a new game in this build. */
+export const allStrategyCards: StrategyCard[] = [...strategies, ...enabledSpecialStrategyCards]
+
+/** Full catalog retained for rendering archived games and isolated tests. */
+export const completeStrategyCatalog: StrategyCard[] = [...strategies, ...specialStrategyCards]
 
 export function isSpecialAction(card: StrategyCard | null | undefined): card is SpecialActionCard {
   return Boolean(card && card.id.startsWith('SA'))
@@ -29,7 +55,7 @@ export function specialActionById(id: string | null | undefined): SpecialActionC
 
 export function strategyCardById(id: string | null | undefined): StrategyCard | null {
   if (!id) return null
-  return allStrategyCards.find((card) => card.id === id) ?? null
+  return completeStrategyCatalog.find((card) => card.id === id) ?? null
 }
 
 export function specialActionSummary(card: SpecialActionCard): string {
