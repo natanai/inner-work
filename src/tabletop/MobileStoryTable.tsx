@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { CardFace, GiftIcon, strategyText } from './Cards'
+import { cognitionDisplay } from './cognitionIdentity'
 import type { GameState, Resolution } from './model'
 import { bonusOriginPhrase, nvcStory, strategyActionPhrase } from './storyNarrative'
 
@@ -22,15 +23,9 @@ function MatchSummary({ line }: { line: Resolution }) {
 
   return (
     <section className="mobile-story-effects" aria-label="Needs affected by this Strategy">
-      {line.publicMatches.length > 0 && (
-        <p><span>Public Needs tended</span><strong>{line.publicMatches.join(' · ')}</strong></p>
-      )}
-      {line.privateMatches.length > 0 && (
-        <p><span>Private effects</span><strong>{line.privateMatches.length} hidden Need{line.privateMatches.length === 1 ? '' : 's'} also tended</strong></p>
-      )}
-      {line.bonusMatches.length > 0 && (
-        <p><span>Bonus Needs tended</span><strong>{line.bonusMatches.join(' · ')}</strong></p>
-      )}
+      {line.publicMatches.length > 0 && <p><span>Public Needs tended</span><strong>{line.publicMatches.join(' · ')}</strong></p>}
+      {line.privateMatches.length > 0 && <p><span>Private effects</span><strong>{line.privateMatches.length} hidden Need{line.privateMatches.length === 1 ? '' : 's'} also tended</strong></p>}
+      {line.bonusMatches.length > 0 && <p><span>Bonus Needs tended</span><strong>{line.bonusMatches.join(' · ')}</strong></p>}
       {line.bonusCreated.length > 0 && (
         <p className="created">
           <span>Introduced by this action</span>
@@ -45,10 +40,7 @@ function MatchSummary({ line }: { line: Resolution }) {
 function RevealMoment({ game, onInspect }: { game: GameState; onInspect: (inspection: Inspection) => void }) {
   return (
     <section className="mobile-story-reveal">
-      <div className="mobile-story-situation-ribbon">
-        <span>Current Situation</span>
-        <strong>{game.situation.title}</strong>
-      </div>
+      <div className="mobile-story-situation-ribbon"><span>Current Situation</span><strong>{game.situation.title}</strong></div>
       <header>
         <span>Simultaneous reveal</span>
         <h1>Three parts influenced one shared person.</h1>
@@ -57,13 +49,14 @@ function RevealMoment({ game, onInspect }: { game: GameState; onInspect: (inspec
       <div className="mobile-story-reveal-cards">
         {game.resolution.map((line, index) => (
           <button
+            className={`owner-${line.cognitionId}`}
             key={line.cognitionId}
             style={{ '--mobile-story-order': index } as CSSProperties}
             onClick={() => onInspect({ id: line.strategy.id, title: line.strategy.title })}
-            aria-label={`Inspect ${line.strategy.title}, chosen by ${line.cognitionName}`}
+            aria-label={`Inspect ${line.strategy.title}, chosen by ${cognitionDisplay(line.cognitionId)}`}
           >
             <CardFace kind="strategy" id={line.strategy.id} />
-            <strong>{line.cognitionName}</strong>
+            <strong>{cognitionDisplay(line.cognitionId)}</strong>
           </button>
         ))}
       </div>
@@ -72,14 +65,7 @@ function RevealMoment({ game, onInspect }: { game: GameState; onInspect: (inspec
   )
 }
 
-function StoryMoment({
-  game,
-  line,
-  index,
-  humanStory,
-  setHumanStory,
-  onInspect,
-}: {
+function StoryMoment({ game, line, index, humanStory, setHumanStory, onInspect }: {
   game: GameState
   line: Resolution
   index: number
@@ -93,21 +79,15 @@ function StoryMoment({
   const generatedStory = nvcStory(game, line)
 
   return (
-    <section className="mobile-story-turn">
+    <section className={`mobile-story-turn owner-${line.cognitionId}`}>
       <header>
-        <span>Story {index + 1} of {game.resolution.length} · {line.cognitionName}</span>
+        <span>Story {index + 1} of {game.resolution.length} · {cognitionDisplay(line.cognitionId)}</span>
         <h1>Which Needs motivated this shared action?</h1>
       </header>
 
       <div className="mobile-story-card-stage">
-        <div className="mobile-story-situation-card" aria-hidden="true">
-          <CardFace kind="situation" id={game.situation.id} />
-        </div>
-        <button
-          className="mobile-story-played-card"
-          onClick={() => onInspect({ id: line.strategy.id, title: line.strategy.title })}
-          aria-label={`Inspect ${line.strategy.title}`}
-        >
+        <div className="mobile-story-situation-card" aria-hidden="true"><CardFace kind="situation" id={game.situation.id} /></div>
+        <button className="mobile-story-played-card" onClick={() => onInspect({ id: line.strategy.id, title: line.strategy.title })} aria-label={`Inspect ${line.strategy.title}`}>
           <CardFace kind="strategy" id={line.strategy.id} />
         </button>
       </div>
@@ -132,9 +112,7 @@ function StoryMoment({
             onChange={(event) => setHumanStory(event.target.value)}
             placeholder={`${line.cognitionName} was motivated by its need for… Through its influence, the shared person chose to… That action also…`}
           />
-          <button className="quiet mobile-story-example-toggle" onClick={() => setShowExample((visible) => !visible)}>
-            {showExample ? 'Hide example' : 'See an example'}
-          </button>
+          <button className="quiet mobile-story-example-toggle" onClick={() => setShowExample((visible) => !visible)}>{showExample ? 'Hide example' : 'See an example'}</button>
           {showExample && (
             <aside className="mobile-story-example">
               <span>Generated from this play</span>
@@ -143,9 +121,7 @@ function StoryMoment({
             </aside>
           )}
         </section>
-      ) : (
-        <blockquote className="mobile-story-npc-story">{generatedStory}</blockquote>
-      )}
+      ) : <blockquote className="mobile-story-npc-story">{generatedStory}</blockquote>}
 
       <p className="mobile-story-card-text">{strategyText(line.strategy)}</p>
       <MatchSummary line={line} />
@@ -160,51 +136,29 @@ function RoundSummary({ game }: { game: GameState }) {
 
   return (
     <section className="mobile-story-summary">
-      <header>
-        <span>Round summary</span>
-        <h1>Now the gifts move.</h1>
-        <p>Only after all three stories are heard do the card effects resolve visibly.</p>
-      </header>
+      <header><span>Round summary</span><h1>Now the gifts move.</h1><p>Only after all three stories are heard do the card effects resolve visibly.</p></header>
 
-      <div className="mobile-story-bank">
-        <GiftIcon variation={0} />
-        <b>+{ledger.publicRemoved}</b>
-        <span>shared gifts</span>
-      </div>
+      <div className="mobile-story-bank"><GiftIcon variation={0} /><b>+{ledger.publicRemoved}</b><span>shared gifts</span></div>
 
       <div className="mobile-story-summary-list">
         <section>
           <h2>Public Needs tended</h2>
           {changed.length > 0
-            ? changed.map((change) => (
-              <p key={change.key}>
-                <span>{change.cognitionName} · {change.need}</span>
-                <b>{change.before} → {change.after}</b>
-              </p>
-            ))
+            ? changed.map((change) => <p key={change.key}><span>{cognitionDisplay(change.cognitionId)} · {change.need}</span><b>{change.before} → {change.after}</b></p>)
             : <p><span>No Public gifts moved.</span></p>}
         </section>
 
         <section>
           <h2>Individual points</h2>
-          {ledger.privateAwards.map((award) => (
-            <p key={`${award.cognitionId}-${award.need}`}><span>{award.cognitionName} · Private</span><b>+{award.points}</b></p>
-          ))}
-          {ledger.bonusAwards.map((award) => (
-            <p key={award.bonusId}><span>{award.cognitionNames.join(' & ')} · {award.need}</span><b>+{award.pointsEach} each</b></p>
-          ))}
+          {ledger.privateAwards.map((award) => <p key={`${award.cognitionId}-${award.need}`}><span>{cognitionDisplay(award.cognitionId)} · Private</span><b>+{award.points}</b></p>)}
+          {ledger.bonusAwards.map((award) => <p key={award.bonusId}><span>{award.cognitionNames.join(' & ')} · {award.need}</span><b>+{award.pointsEach} each</b></p>)}
           {ledger.privateAwards.length === 0 && ledger.bonusAwards.length === 0 && <p><span>No individual gifts moved.</span></p>}
         </section>
 
         {ledger.bonusCreated.length > 0 && (
           <section className="created">
             <h2>Bonus Needs entering next round</h2>
-            {ledger.bonusCreated.map((bonus) => (
-              <p key={bonus.id}>
-                <span>{bonus.need} · {bonusOriginPhrase(bonus)}</span>
-                <b><GiftIcon variation={1} />{bonus.gifts}</b>
-              </p>
-            ))}
+            {ledger.bonusCreated.map((bonus) => <p key={bonus.id}><span>{bonus.need} · {bonusOriginPhrase(bonus)}</span><b><GiftIcon variation={1} />{bonus.gifts}</b></p>)}
           </section>
         )}
       </div>
@@ -281,9 +235,7 @@ export function MobileStoryTable({ game, onContinue, onNextSituation }: Props) {
           {step === finalStep && <RoundSummary game={game} />}
         </main>
 
-        <footer>
-          <button className="primary" onClick={next}>{label}</button>
-        </footer>
+        <footer><button className="primary" onClick={next}>{label}</button></footer>
       </div>
 
       {inspection && (
