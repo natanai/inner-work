@@ -11,8 +11,11 @@
 .desktop-cognition-column.owner-alpha > header > b,
 .true-need-owner-alpha .true-need-owner-badge,
 .mobile-cognition-list article.owner-alpha > b,
+.responsibility-card.owner-alpha > header > b,
 .cognition-identity-token.owner-alpha,
-.mobile-bank-personal > b {
+.mobile-bank-personal > b,
+.required-needs-grid > .situation-need-tile:nth-child(-n+2) .situation-need-owner,
+.mobile-cognition-list > article:nth-child(1) > b {
   background: var(--cognition-alpha) !important;
   color: var(--cognition-token-ink) !important;
 }
@@ -23,7 +26,11 @@
 .desktop-cognition-column.owner-beta > header > b,
 .true-need-owner-beta .true-need-owner-badge,
 .mobile-cognition-list article.owner-beta > b,
-.cognition-identity-token.owner-beta {
+.responsibility-card.owner-beta > header > b,
+.cognition-identity-token.owner-beta,
+.required-needs-grid > .situation-need-tile:nth-child(3) .situation-need-owner,
+.required-needs-grid > .situation-need-tile:nth-child(4) .situation-need-owner,
+.mobile-cognition-list > article:nth-child(2) > b {
   background: var(--cognition-beta) !important;
   color: var(--cognition-token-ink) !important;
 }
@@ -34,7 +41,11 @@
 .desktop-cognition-column.owner-gamma > header > b,
 .true-need-owner-gamma .true-need-owner-badge,
 .mobile-cognition-list article.owner-gamma > b,
-.cognition-identity-token.owner-gamma {
+.responsibility-card.owner-gamma > header > b,
+.cognition-identity-token.owner-gamma,
+.required-needs-grid > .situation-need-tile:nth-child(5) .situation-need-owner,
+.required-needs-grid > .situation-need-tile:nth-child(6) .situation-need-owner,
+.mobile-cognition-list > article:nth-child(3) > b {
   background: var(--cognition-gamma) !important;
   color: var(--cognition-token-ink) !important;
 }
@@ -42,7 +53,7 @@
 .cognition-identity-line {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -76,4 +87,31 @@
   line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mobile-deal-cognition > header.cognition-identity-line {
+  justify-content: flex-start;
+}
+
+.mobile-deal-cognition > header.cognition-identity-line .cognition-role-name {
+  text-align: left;
+}
+
+.mobile-deal-cognition > header.cognition-identity-line .cognition-role-name > small {
+  opacity: .76;
+}
+
+.mobile-story-reveal-cards button.owner-alpha > strong,
+.mobile-story-turn.owner-alpha > header > span {
+  color: var(--cognition-alpha);
+}
+
+.mobile-story-reveal-cards button.owner-beta > strong,
+.mobile-story-turn.owner-beta > header > span {
+  color: var(--cognition-beta);
+}
+
+.mobile-story-reveal-cards button.owner-gamma > strong,
+.mobile-story-turn.owner-gamma > header > span {
+  color: var(--cognition-gamma);
 }
