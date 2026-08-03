@@ -1,4 +1,12 @@
-import { needs, situations, strategies, type Effect, type NeedCard, type SituationCard, type StrategyCard } from '../data/cards'
+import { needs, situations, type Effect, type NeedCard, type SituationCard, type StrategyCard } from '../data/cards'
+import { encodeCommit, parseCommit } from './commitSelection'
+import {
+  allStrategyCards,
+  isSpecialAction,
+  specialActionById,
+  specialActionSummary,
+  type SpecialActionCard,
+} from './specialActions'
 
 export type Phase = 'planning' | 'revealed' | 'complete'
 export type CognitionId = 'alpha' | 'beta' | 'gamma'
@@ -38,10 +46,19 @@ export type Cognition = {
   privateScore: number
   bonusScore: number
 }
+export type SpecialActionUse = {
+  cognitionId: CognitionId
+  cognitionName: string
+  card: StrategyCard
+  summary: string
+  target?: string
+}
 export type Resolution = {
   cognitionId: CognitionId
   cognitionName: string
   strategy: StrategyCard
+  specialAction?: StrategyCard
+  specialSummary?: string
   legal: boolean
   shared: number
   private: number
@@ -83,6 +100,7 @@ export type RoundLedger = {
   privateAwards: PrivateAward[]
   bonusAwards: BonusAward[]
   bonusCreated: BonusNeed[]
+  specialActions: SpecialActionUse[]
 }
 export type GameState = {
   cognitions: Cognition[]
@@ -124,6 +142,14 @@ function draw<T>(deck: T[], recycle: T[]): [T, T[]] {
   return [card, rest]
 }
 
+function drawNeedAvoiding(deckInput: NeedCard[], excluded: Set<string>): [NeedCard, NeedCard[]] {
+  let deck = deckInput.filter((card) => !excluded.has(card.id))
+  if (deck.length === 0) deck = shuffle(needs.filter((card) => !excluded.has(card.id)))
+  const [card, ...rest] = deck
+  if (!card) throw new Error('The Need deck could not supply another unique card.')
+  return [card, rest]
+}
+
 function situationSetup(card: NeedCard, situation: SituationCard): GiftSetup {
   const added = Math.max(0, situation.effects.find((effect) => effect.need === card.need)?.amount ?? 0)
   const multiplied = card.feeling === situation.feelingMultiplier
@@ -153,19 +179,39 @@ function activeBonusNeeds(game: Pick<GameState, 'bonusNeeds' | 'round'>): BonusN
   return game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round)
 }
 
-function effectsFor(strategy: StrategyCard, situation: SituationCard): Effect[] {
-  return situation.event ? [...strategy.effects, ...strategy.eventEffects] : strategy.effects
+function effectsFor(
+  strategy: StrategyCard,
+  situation: SituationCard,
+  eventOverride = false,
+  boostedNeed: string | null = null,
+): Effect[] {
+  if (isSpecialAction(strategy)) return []
+  const source = situation.event || eventOverride
+    ? [...strategy.effects, ...strategy.eventEffects]
+    : strategy.effects
+  const result = source.map((effect) => ({ ...effect }))
+  if (boostedNeed) {
+    const matching = result.find((effect) => effect.need === boostedNeed && effect.amount > 0)
+    if (matching) matching.amount += 3
+  }
+  return result
 }
 
-function positiveStrength(strategy: StrategyCard, situation: SituationCard, need: string): number {
-  return effectsFor(strategy, situation)
+function positiveStrength(
+  strategy: StrategyCard,
+  situation: SituationCard,
+  need: string,
+  eventOverride = false,
+  boostedNeed: string | null = null,
+): number {
+  return effectsFor(strategy, situation, eventOverride, boostedNeed)
     .filter((effect) => effect.need === need && effect.amount > 0)
     .reduce((total, effect) => total + effect.amount, 0)
 }
 
 export function createGame(): GameState {
   let needDeck = shuffle(needs)
-  let strategyDeck = shuffle(strategies)
+  let strategyDeck = shuffle(allStrategyCards)
   const shuffledSituations = shuffle(situations)
   const [situation, ...situationDeck] = shuffledSituations
 
@@ -204,20 +250,58 @@ export function createGame(): GameState {
 }
 
 export function canPlay(cognition: Cognition, strategy: StrategyCard, bonusNeeds: BonusNeed[] = []): boolean {
+  if (isSpecialAction(strategy)) return false
   return strategy.effects.some((effect) => effect.amount > 0 && (
     cognition.publicNeeds.some((slot) => slot.gifts > 0 && slot.card.need === effect.need)
     || bonusNeeds.some((bonus) => bonus.gifts > 0 && bonus.need === effect.need)
   ))
 }
 
-function npcValue(cognition: Cognition, all: Cognition[], strategy: StrategyCard, game: GameState): number {
+function roundHasSpecial(game: GameState, specialId: string): boolean {
+  return game.cognitions.some((cognition) => parseCommit(cognition.selected).specialId === specialId)
+}
+
+export function canPlayCommitted(game: GameState, cognition: Cognition, strategy: StrategyCard): boolean {
+  if (isSpecialAction(strategy)) return true
+  const commit = parseCommit(cognition.selected)
+  const eventOverride = roundHasSpecial(game, 'SA6')
+  const virtualBonuses = [...activeBonusNeeds(game)]
+  if (roundHasSpecial(game, 'SA5')) {
+    virtualBonuses.push({
+      id: 'preview-understanding',
+      need: 'Understanding',
+      gifts: 1,
+      initialGifts: 1,
+      sourceStrategyId: 'SA5',
+      sourceStrategyTitle: 'Effective Communication',
+      sourceCognitionId: cognition.id,
+      sourceCognitionName: cognition.name,
+      availableRound: game.round,
+    })
+  }
+  const effects = effectsFor(strategy, game.situation, eventOverride, commit.specialId === 'SA7' ? commit.target : null)
+  const ordinary = effects.some((effect) => effect.amount > 0 && (
+    cognition.publicNeeds.some((slot) => slot.gifts > 0 && slot.card.need === effect.need)
+    || virtualBonuses.some((bonus) => bonus.gifts > 0 && bonus.need === effect.need)
+  ))
+  const privateAllowed = commit.specialId === 'SA2' || roundHasSpecial(game, 'SA3')
+  return ordinary || (privateAllowed && cognition.privateNeed.gifts > 0 && effects.some((effect) => effect.amount > 0 && effect.need === cognition.privateNeed.card.need))
+}
+
+function npcValue(cognition: Cognition, all: Cognition[], strategy: StrategyCard, game: GameState, eventOverride = false): number {
+  if (isSpecialAction(strategy)) return Number.NEGATIVE_INFINITY
   const bonuses = activeBonusNeeds(game)
-  if (!canPlay(cognition, strategy, bonuses)) return Number.NEGATIVE_INFINITY
+  const effects = effectsFor(strategy, game.situation, eventOverride)
+  const legal = effects.some((effect) => effect.amount > 0 && (
+    cognition.publicNeeds.some((slot) => slot.gifts > 0 && slot.card.need === effect.need)
+    || bonuses.some((bonus) => bonus.gifts > 0 && bonus.need === effect.need)
+  ))
+  if (!legal) return Number.NEGATIVE_INFINITY
   let shared = 0
   let ownPublic = 0
   let ownPrivate = 0
   let bonus = 0
-  for (const effect of effectsFor(strategy, game.situation)) {
+  for (const effect of effects) {
     if (effect.amount <= 0) continue
     for (const target of all) {
       for (const slot of target.publicNeeds) {
@@ -241,12 +325,71 @@ function npcValue(cognition: Cognition, all: Cognition[], strategy: StrategyCard
     : shared * 5 + ownPublic * 1.5 + ownPrivate * 2 + bonus * 2.5 + wobble
 }
 
-function chooseNpc(cognition: Cognition, all: Cognition[], game: GameState): string | null {
-  const ranked = cognition.hand
+function strongestPositiveNeed(strategy: StrategyCard, eventActive: boolean): string | null {
+  const effects = eventActive ? [...strategy.effects, ...strategy.eventEffects] : strategy.effects
+  return effects.filter((effect) => effect.amount > 0).sort((left, right) => right.amount - left.amount)[0]?.need ?? null
+}
+
+function chooseNpcCommit(cognition: Cognition, all: Cognition[], game: GameState): string | null {
+  const ordinary = cognition.hand.filter((card) => !isSpecialAction(card))
+  const specials = cognition.hand.filter(isSpecialAction)
+  const ranked = ordinary
     .map((strategy) => ({ strategy, score: npcValue(cognition, all, strategy, game) }))
-    .filter(({ score }) => Number.isFinite(score))
     .sort((a, b) => b.score - a.score)
-  return ranked[0]?.strategy.id ?? cognition.hand[Math.floor(Math.random() * cognition.hand.length)]?.id ?? null
+  const legal = ranked.filter(({ score }) => Number.isFinite(score))
+  const privateCard = ordinary
+    .map((strategy) => ({ strategy, strength: positiveStrength(strategy, game.situation, cognition.privateNeed.card.need) }))
+    .filter(({ strength }) => strength > 0)
+    .sort((a, b) => b.strength - a.strength)[0]?.strategy ?? null
+
+  const deepIntrospection = specials.find((card) => card.id === 'SA2')
+  const groupTherapy = specials.find((card) => card.id === 'SA3')
+  if (privateCard && (deepIntrospection || groupTherapy)) {
+    return encodeCommit({ strategyId: privateCard.id, specialId: (deepIntrospection ?? groupTherapy)!.id, target: null })
+  }
+
+  const effectiveCommunication = specials.find((card) => card.id === 'SA5')
+  const understandingCard = ordinary.find((strategy) => positiveStrength(strategy, game.situation, 'Understanding') > 0)
+  if (effectiveCommunication && understandingCard && legal.length === 0) {
+    return encodeCommit({ strategyId: understandingCard.id, specialId: effectiveCommunication.id, target: null })
+  }
+
+  const turnOfEvents = specials.find((card) => card.id === 'SA6')
+  if (turnOfEvents && !game.situation.event) {
+    const eventCandidate = ordinary
+      .map((strategy) => ({ strategy, score: npcValue(cognition, all, strategy, game, true) }))
+      .filter(({ score }) => Number.isFinite(score))
+      .sort((a, b) => b.score - a.score)[0]?.strategy
+    if (eventCandidate && legal.length === 0) {
+      return encodeCommit({ strategyId: eventCandidate.id, specialId: turnOfEvents.id, target: null })
+    }
+  }
+
+  const chosen = legal[0]?.strategy ?? ordinary[Math.floor(Math.random() * Math.max(ordinary.length, 1))] ?? null
+  const chosenLegal = Boolean(chosen && legal.some(({ strategy }) => strategy.id === chosen.id))
+  if (!chosen) {
+    const loneSpecial = specials[0]
+    return loneSpecial ? encodeCommit({ strategyId: null, specialId: loneSpecial.id, target: null }) : null
+  }
+
+  const deepBreath = specials.find((card) => card.id === 'SA7')
+  if (chosenLegal && deepBreath) {
+    return encodeCommit({ strategyId: chosen.id, specialId: deepBreath.id, target: strongestPositiveNeed(chosen, game.situation.event) })
+  }
+  if (chosenLegal && turnOfEvents && !game.situation.event && chosen.eventEffects.length > 0) {
+    return encodeCommit({ strategyId: chosen.id, specialId: turnOfEvents.id, target: null })
+  }
+  const emergency = specials.find((card) => card.id === 'SA4')
+  if (chosenLegal && emergency) return encodeCommit({ strategyId: chosen.id, specialId: emergency.id, target: null })
+  if (chosenLegal && effectiveCommunication) return encodeCommit({ strategyId: chosen.id, specialId: effectiveCommunication.id, target: null })
+
+  const spontaneous = specials.find((card) => card.id === 'SA1')
+  if (!chosenLegal && spontaneous) {
+    const target = cognition.publicNeeds[0]
+    return encodeCommit({ strategyId: chosen.id, specialId: spontaneous.id, target: target ? `${cognition.id}:${target.card.id}` : null })
+  }
+  if (!chosenLegal && emergency) return encodeCommit({ strategyId: chosen.id, specialId: emergency.id, target: null })
+  return chosen.id
 }
 
 function unique(items: string[]): string[] {
@@ -261,92 +404,183 @@ function joinNatural(items: string[]): string {
   return `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}`
 }
 
-function needPhrase(needsToName: string[]): string {
-  const values = unique(needsToName)
-  return values.length === 1 ? `the need for ${values[0]}` : `the needs for ${joinNatural(values)}`
-}
-
-function ownedNeedPhrase(needsToName: string[]): string {
-  const values = unique(needsToName)
-  return values.length === 1 ? `need for ${values[0]}` : `needs for ${joinNatural(values)}`
-}
-
 function actionPhrase(title: string): string {
   const cleaned = title.replace(/[.!?]+$/, '')
   return cleaned ? cleaned[0].toLowerCase() + cleaned.slice(1) : title
 }
 
-function collectiveStory(
-  situation: SituationCard,
+function simpleStory(actor: Cognition, strategy: StrategyCard, situation: SituationCard, legal: boolean, specialSummary?: string): string {
+  const specialSentence = specialSummary ? `${actor.name} first used a Special Action: ${specialSummary}` : ''
+  if (isSpecialAction(strategy)) return specialSentence || `${actor.name} used “${strategy.title}.”`
+  const strategySentence = legal
+    ? `${actor.name} influenced the shared person to ${actionPhrase(strategy.title)} during “${situation.title}.”`
+    : `${actor.name} could not use “${strategy.title}” to tend one of its own Public Needs or an active Bonus Need, so that Strategy was discarded.`
+  return [specialSentence, strategySentence].filter(Boolean).join(' ')
+}
+
+type PreparedRound = {
+  cognitions: Cognition[]
+  needDeck: NeedCard[]
+  bonusNeeds: BonusNeed[]
+  eventOverride: boolean
+  groupPrivate: boolean
+  privateActors: Set<CognitionId>
+  boosts: Map<CognitionId, string>
+  uses: SpecialActionUse[]
+}
+
+function activeCardIds(cognitions: Cognition[]): Set<string> {
+  return new Set(cognitions.flatMap((cognition) => [
+    cognition.privateNeed.card.id,
+    ...cognition.publicNeeds.map((slot) => slot.card.id),
+  ]))
+}
+
+function prepareSpecialActions(game: GameState, choicesInput: Cognition[]): PreparedRound {
+  let cognitions = choicesInput.map((cognition) => ({
+    ...cognition,
+    publicNeeds: cognition.publicNeeds.map((slot) => ({ ...slot, setup: { ...slot.setup } })),
+    privateNeed: { ...cognition.privateNeed, setup: { ...cognition.privateNeed.setup } },
+  }))
+  let needDeck = [...game.needDeck]
+  const bonusNeeds = game.bonusNeeds.map((bonus) => ({ ...bonus }))
+  const eventOverride = cognitions.some((cognition) => parseCommit(cognition.selected).specialId === 'SA6')
+  const groupPrivate = cognitions.some((cognition) => parseCommit(cognition.selected).specialId === 'SA3')
+  const privateActors = new Set<CognitionId>()
+  const boosts = new Map<CognitionId, string>()
+  const uses: SpecialActionUse[] = []
+
+  for (const actor of cognitions) {
+    const commit = parseCommit(actor.selected)
+    const special = specialActionById(commit.specialId)
+    if (!special) continue
+    let summary = specialActionSummary(special)
+    let targetLabel: string | undefined
+
+    if (special.id === 'SA2') privateActors.add(actor.id)
+    if (special.id === 'SA7' && commit.target) boosts.set(actor.id, commit.target)
+
+    if (special.id === 'SA1') {
+      const [targetId, targetCardId] = (commit.target ?? '').split(':') as [CognitionId, string]
+      const target = cognitions.find((cognition) => cognition.id === targetId)
+      const slotIndex = target?.publicNeeds.findIndex((slot) => slot.card.id === targetCardId) ?? -1
+      if (target && slotIndex >= 0) {
+        const excluded = activeCardIds(cognitions)
+        const [replacement, rest] = drawNeedAvoiding(needDeck, excluded)
+        needDeck = rest
+        const setup = situationSetup(replacement, game.situation)
+        const previous = target.publicNeeds[slotIndex]
+        target.publicNeeds[slotIndex] = { card: replacement, gifts: setup.total, setup }
+        targetLabel = `${target.name}: ${previous.card.need} → ${replacement.need}`
+        summary = `${actor.name} replaced ${target.name}’s Public Need for ${previous.card.need} with ${replacement.feeling}: ${replacement.need}.`
+      } else {
+        summary = `${actor.name} played Spontaneous Help, but its selected Public Need was no longer available.`
+      }
+    }
+
+    if (special.id === 'SA4') {
+      const drawn: NeedCard[] = []
+      const excluded = activeCardIds(cognitions)
+      for (let index = 0; index < 2; index += 1) {
+        const [card, rest] = drawNeedAvoiding(needDeck, new Set([...excluded, ...drawn.map((item) => item.id)]))
+        needDeck = rest
+        drawn.push(card)
+        bonusNeeds.push({
+          id: `${game.situationNumber}-${game.round}-${actor.id}-${special.id}-${index}`,
+          need: card.need,
+          gifts: 1,
+          initialGifts: 1,
+          sourceStrategyId: special.id,
+          sourceStrategyTitle: special.title,
+          sourceCognitionId: actor.id,
+          sourceCognitionName: actor.name,
+          availableRound: game.round,
+        })
+      }
+      targetLabel = drawn.map((card) => card.need).join(' and ')
+      summary = `${actor.name} introduced active Bonus Needs for ${targetLabel}.`
+    }
+
+    if (special.id === 'SA5') {
+      bonusNeeds.push({
+        id: `${game.situationNumber}-${game.round}-${actor.id}-${special.id}`,
+        need: 'Understanding',
+        gifts: 1,
+        initialGifts: 1,
+        sourceStrategyId: special.id,
+        sourceStrategyTitle: special.title,
+        sourceCognitionId: actor.id,
+        sourceCognitionName: actor.name,
+        availableRound: game.round,
+      })
+      targetLabel = 'Understanding'
+      summary = `${actor.name} introduced an active Bonus Need for Understanding.`
+    }
+
+    if (special.id === 'SA6') summary = `${actor.name} activated the Event effects printed on every paired Strategy this round.`
+    if (special.id === 'SA2') summary = `${actor.name} may qualify its paired Strategy through its own hidden Private Need this round.`
+    if (special.id === 'SA3') summary = `${actor.name} opened a Group Therapy Session, allowing every Cognition to qualify through its own hidden Private Need this round.`
+    if (special.id === 'SA7') {
+      const selectedStrategy = actor.hand.find((card) => card.id === commit.strategyId && !isSpecialAction(card))
+      const validTarget = selectedStrategy && commit.target && effectsFor(selectedStrategy, game.situation, eventOverride).some((effect) => effect.need === commit.target && effect.amount > 0)
+      if (validTarget) {
+        targetLabel = commit.target ?? undefined
+        summary = `${actor.name} added +3 to ${selectedStrategy.title}’s ${commit.target} effect.`
+      } else {
+        boosts.delete(actor.id)
+        summary = `${actor.name} played Deep Breath, but no valid positive Strategy effect was selected to boost.`
+      }
+    }
+
+    uses.push({ cognitionId: actor.id, cognitionName: actor.name, card: special, summary, target: targetLabel })
+  }
+
+  return { cognitions, needDeck, bonusNeeds, eventOverride, groupPrivate, privateActors, boosts, uses }
+}
+
+function preparedCanPlay(
   actor: Cognition,
   strategy: StrategyCard,
-  publicBefore: Array<{ cognition: Cognition; slot: NeedSlot }>,
-  choices: Cognition[],
-  bonusesBefore: BonusNeed[],
-  bonusCreated: BonusNeed[],
-): string {
-  const effects = effectsFor(strategy, situation).filter((effect) => effect.amount > 0)
-  const matchesNeed = (need: string) => effects.some((effect) => effect.need === need)
-  const ownPublic = unique(publicBefore
-    .filter(({ cognition, slot }) => cognition.id === actor.id && slot.gifts > 0 && matchesNeed(slot.card.need))
-    .map(({ slot }) => slot.card.need))
-
-  const otherPublic = new Map<string, string[]>()
-  for (const { cognition, slot } of publicBefore) {
-    if (cognition.id === actor.id || slot.gifts === 0 || !matchesNeed(slot.card.need)) continue
-    otherPublic.set(cognition.name, unique([...(otherPublic.get(cognition.name) ?? []), slot.card.need]))
-  }
-
-  const privateOwners = unique(choices
-    .filter((cognition) => cognition.privateNeed.gifts > 0 && matchesNeed(cognition.privateNeed.card.need))
-    .map((cognition) => cognition.name))
-  const matchedBonuses = bonusesBefore.filter((bonus) => bonus.gifts > 0 && matchesNeed(bonus.need))
-
-  const motivation = ownPublic.length > 0
-    ? `${actor.name} brought forward ${needPhrase(ownPublic)}`
-    : matchedBonuses.length > 0
-      ? `${actor.name} recognized ${matchedBonuses.length === 1 ? 'the active Bonus Need' : 'the active Bonus Needs'} for ${joinNatural(matchedBonuses.map((bonus) => bonus.need))}`
-      : `${actor.name} brought forward this Strategy`
-
-  const opening = `${motivation}. That influenced the whole psyche to choose a shared action: the person chose to ${actionPhrase(strategy.title)} during “${situation.title}.”`
-  const consequences: string[] = []
-
-  for (const [cognitionName, needsTended] of otherPublic) {
-    consequences.push(`It also tended ${cognitionName}’s ${ownedNeedPhrase(needsTended)}`)
-  }
-
-  if (privateOwners.length > 0) {
-    const ownerText = privateOwners.length === 1 ? privateOwners[0] : joinNatural(privateOwners)
-    consequences.push(`It also quietly tended a hidden Private Need held by ${ownerText}`)
-  }
-
-  for (const bonus of matchedBonuses) {
-    consequences.push(`It also tended the active Bonus Need for ${bonus.need}, introduced when ${bonus.sourceCognitionName} brought forward “${bonus.sourceStrategyTitle}”`)
-  }
-
-  if (bonusCreated.length > 0) {
-    const created = joinNatural(bonusCreated.map((bonus) => bonus.need))
-    consequences.push(`This shared action also introduced ${bonusCreated.length === 1 ? 'a new Bonus Need' : 'new Bonus Needs'} for ${created}, which will enter play next round`)
-  }
-
-  return `${opening}${consequences.length ? ` ${consequences.join('. ')}.` : ''}`
+  bonuses: BonusNeed[],
+  situation: SituationCard,
+  eventOverride: boolean,
+  privateAllowed: boolean,
+  boostedNeed: string | null,
+): boolean {
+  const effects = effectsFor(strategy, situation, eventOverride, boostedNeed)
+  return effects.some((effect) => effect.amount > 0 && (
+    actor.publicNeeds.some((slot) => slot.gifts > 0 && slot.card.need === effect.need)
+    || bonuses.some((bonus) => bonus.gifts > 0 && bonus.need === effect.need)
+    || (privateAllowed && actor.privateNeed.gifts > 0 && actor.privateNeed.card.need === effect.need)
+  ))
 }
 
 export function resolveRound(game: GameState): GameState {
-  const bonusesBefore = activeBonusNeeds(game)
-  const choices = game.cognitions.map((cognition) => cognition.human
+  const initialChoices = game.cognitions.map((cognition) => cognition.human
     ? cognition
-    : { ...cognition, selected: chooseNpc(cognition, game.cognitions, game) })
-  const selected = choices.map((actor) => ({
-    actor,
-    strategy: actor.hand.find((card) => card.id === actor.selected) ?? null,
-  }))
-  const legalSelections = selected.filter(({ actor, strategy }) => strategy && canPlay(actor, strategy, bonusesBefore)) as Array<{ actor: Cognition; strategy: StrategyCard }>
+    : { ...cognition, selected: chooseNpcCommit(cognition, game.cognitions, game) })
+  const prepared = prepareSpecialActions(game, initialChoices)
+  const choices = prepared.cognitions
+  const bonusesBefore = activeBonusNeeds({ bonusNeeds: prepared.bonusNeeds, round: game.round })
+  const selected = choices.map((actor) => {
+    const commit = parseCommit(actor.selected)
+    const strategy = actor.hand.find((card) => card.id === commit.strategyId && !isSpecialAction(card)) ?? null
+    const special = actor.hand.find((card) => card.id === commit.specialId && isSpecialAction(card)) ?? null
+    return { actor, commit, strategy, special }
+  })
+  const legalSelections = selected.flatMap(({ actor, commit, strategy }) => {
+    if (!strategy) return []
+    const privateAllowed = prepared.groupPrivate || prepared.privateActors.has(actor.id)
+    const boostedNeed = commit.specialId === 'SA7' ? prepared.boosts.get(actor.id) ?? null : null
+    return preparedCanPlay(actor, strategy, bonusesBefore, game.situation, prepared.eventOverride, privateAllowed, boostedNeed)
+      ? [{ actor, strategy, boostedNeed }]
+      : []
+  })
 
   const publicBefore = choices.flatMap((cognition) => cognition.publicNeeds.map((slot) => ({ cognition, slot })))
   const publicStrength = new Map<string, number>()
-  for (const { strategy } of legalSelections) {
-    for (const effect of effectsFor(strategy, game.situation)) {
+  for (const { actor, strategy, boostedNeed } of legalSelections) {
+    for (const effect of effectsFor(strategy, game.situation, prepared.eventOverride, boostedNeed)) {
       if (effect.amount > 0) publicStrength.set(effect.need, (publicStrength.get(effect.need) ?? 0) + effect.amount)
     }
   }
@@ -377,7 +611,13 @@ export function resolveRound(game: GameState): GameState {
 
   const privateAwards: PrivateAward[] = []
   cognitions = cognitions.map((cognition) => {
-    const totalStrength = legalSelections.reduce((total, { strategy }) => total + positiveStrength(strategy, game.situation, cognition.privateNeed.card.need), 0)
+    const totalStrength = legalSelections.reduce((total, { actor, strategy, boostedNeed }) => total + positiveStrength(
+      strategy,
+      game.situation,
+      cognition.privateNeed.card.need,
+      prepared.eventOverride,
+      actor.id === cognition.id ? boostedNeed : null,
+    ), 0)
     const removed = Math.min(cognition.privateNeed.gifts, totalStrength)
     if (removed > 0) privateAwards.push({ cognitionId: cognition.id, cognitionName: cognition.name, need: cognition.privateNeed.card.need, points: removed })
     return {
@@ -389,10 +629,13 @@ export function resolveRound(game: GameState): GameState {
 
   const bonusAwards: BonusAward[] = []
   const bonusScoreByCognition = new Map<CognitionId, number>()
-  const resolvedBonuses = game.bonusNeeds.map((bonus) => {
+  const resolvedBonuses = prepared.bonusNeeds.map((bonus) => {
     if (bonus.gifts === 0 || bonus.availableRound > game.round) return bonus
     const contenders = legalSelections
-      .map(({ actor, strategy }) => ({ actor, strength: positiveStrength(strategy, game.situation, bonus.need) }))
+      .map(({ actor, strategy, boostedNeed }) => ({
+        actor,
+        strength: positiveStrength(strategy, game.situation, bonus.need, prepared.eventOverride, boostedNeed),
+      }))
       .filter(({ strength }) => strength > 0)
     const highest = contenders.reduce((value, contender) => Math.max(value, contender.strength), 0)
     if (highest === 0) return bonus
@@ -411,8 +654,8 @@ export function resolveRound(game: GameState): GameState {
   cognitions = cognitions.map((cognition) => ({ ...cognition, bonusScore: cognition.bonusScore + (bonusScoreByCognition.get(cognition.id) ?? 0) }))
 
   const bonusCreated: BonusNeed[] = []
-  for (const { actor, strategy } of legalSelections) {
-    effectsFor(strategy, game.situation).forEach((effect, index) => {
+  for (const { actor, strategy, boostedNeed } of legalSelections) {
+    effectsFor(strategy, game.situation, prepared.eventOverride, boostedNeed).forEach((effect, index) => {
       if (effect.amount >= 0) return
       const gifts = Math.abs(effect.amount)
       bonusCreated.push({
@@ -429,20 +672,30 @@ export function resolveRound(game: GameState): GameState {
     })
   }
 
-  const resolutionByCognition: Resolution[] = selected.flatMap(({ actor, strategy }) => {
-    if (!strategy) return []
-    const legal = canPlay(actor, strategy, bonusesBefore)
-    const effects = effectsFor(strategy, game.situation).filter((effect) => effect.amount > 0)
+  const resolutionByCognition: Resolution[] = selected.flatMap(({ actor, commit, strategy, special }) => {
+    const displayCard = strategy ?? special
+    if (!displayCard) return []
+    const privateAllowed = prepared.groupPrivate || prepared.privateActors.has(actor.id)
+    const boostedNeed = commit.specialId === 'SA7' ? prepared.boosts.get(actor.id) ?? null : null
+    const legal = strategy
+      ? preparedCanPlay(actor, strategy, bonusesBefore, game.situation, prepared.eventOverride, privateAllowed, boostedNeed)
+      : Boolean(special)
+    const effects = strategy && legal
+      ? effectsFor(strategy, game.situation, prepared.eventOverride, boostedNeed).filter((effect) => effect.amount > 0)
+      : []
     const publicMatches = unique(effects.flatMap((effect) => publicBefore.some(({ slot }) => slot.gifts > 0 && slot.card.need === effect.need) ? [effect.need] : []))
     const privateMatches = unique(effects.flatMap((effect) => choices.some((target) => target.privateNeed.gifts > 0 && target.privateNeed.card.need === effect.need) ? [effect.need] : []))
     const bonusMatches = unique(effects.flatMap((effect) => bonusesBefore.some((bonus) => bonus.gifts > 0 && bonus.need === effect.need) ? [effect.need] : []))
-    const actorCreated = bonusCreated.filter((bonus) => bonus.sourceCognitionId === actor.id && bonus.sourceStrategyId === strategy.id)
-    const shared = legal ? effects.reduce((total, effect) => total + publicBefore.reduce((subtotal, { slot }) => slot.gifts > 0 && slot.card.need === effect.need ? subtotal + Math.min(slot.gifts, effect.amount) : subtotal, 0), 0) : 0
-    const privatePoints = legal ? effects.reduce((total, effect) => total + choices.reduce((subtotal, target) => target.privateNeed.gifts > 0 && target.privateNeed.card.need === effect.need ? subtotal + Math.min(target.privateNeed.gifts, effect.amount) : subtotal, 0), 0) : 0
+    const actorCreated = bonusCreated.filter((bonus) => bonus.sourceCognitionId === actor.id && bonus.sourceStrategyId === strategy?.id)
+    const shared = effects.reduce((total, effect) => total + publicBefore.reduce((subtotal, { slot }) => slot.gifts > 0 && slot.card.need === effect.need ? subtotal + Math.min(slot.gifts, effect.amount) : subtotal, 0), 0)
+    const privatePoints = effects.reduce((total, effect) => total + choices.reduce((subtotal, target) => target.privateNeed.gifts > 0 && target.privateNeed.card.need === effect.need ? subtotal + Math.min(target.privateNeed.gifts, effect.amount) : subtotal, 0), 0)
+    const specialUse = prepared.uses.find((use) => use.cognitionId === actor.id && use.card.id === special?.id)
     return [{
       cognitionId: actor.id,
       cognitionName: actor.name,
-      strategy,
+      strategy: displayCard,
+      specialAction: special ?? undefined,
+      specialSummary: specialUse?.summary,
       legal,
       shared,
       private: privatePoints,
@@ -450,9 +703,7 @@ export function resolveRound(game: GameState): GameState {
       privateMatches,
       bonusMatches,
       bonusCreated: actorCreated,
-      story: legal
-        ? collectiveStory(game.situation, actor, strategy, publicBefore, choices, bonusesBefore, actorCreated)
-        : `${actor.name} could not bring “${strategy.title}” into the shared action because it did not tend one of that Cognition’s own Public Needs or an active Bonus Need. The card was discarded.`,
+      story: simpleStory(actor, displayCard, game.situation, legal, specialUse?.summary),
     }]
   })
   const resolution = [
@@ -465,6 +716,7 @@ export function resolveRound(game: GameState): GameState {
   return {
     ...game,
     cognitions,
+    needDeck: prepared.needDeck,
     bonusNeeds: [...resolvedBonuses.filter((bonus) => bonus.gifts > 0), ...bonusCreated],
     sharedScore: sharedAfter,
     phase: complete ? 'complete' : 'revealed',
@@ -477,17 +729,26 @@ export function resolveRound(game: GameState): GameState {
       privateAwards,
       bonusAwards,
       bonusCreated,
+      specialActions: prepared.uses,
     },
   }
 }
 
 function refill(cognitions: Cognition[], deckInput: StrategyCard[]): [Cognition[], StrategyCard[]] {
-  let deck = deckInput
-  const used = new Set(cognitions.flatMap((cognition) => cognition.selected ? [cognition.selected] : []))
+  let deck = [...deckInput]
+  const committed = cognitions.flatMap((cognition) => {
+    const selection = parseCommit(cognition.selected)
+    return [selection.strategyId, selection.specialId].filter((id): id is string => Boolean(id))
+  })
+  const used = new Set(committed)
   const next = cognitions.map((cognition) => {
-    let hand = cognition.hand.filter((card) => card.id !== cognition.selected)
+    const selection = parseCommit(cognition.selected)
+    const removed = new Set([selection.strategyId, selection.specialId].filter((id): id is string => Boolean(id)))
+    let hand = cognition.hand.filter((card) => !removed.has(card.id))
     while (hand.length < 4) {
-      const [card, rest] = draw(deck, strategies.filter((candidate) => !used.has(candidate.id)))
+      const unavailable = new Set(cognitions.flatMap((item) => item.hand.map((card) => card.id)))
+      const recycle = allStrategyCards.filter((candidate) => !used.has(candidate.id) && !unavailable.has(candidate.id) && !hand.some((card) => card.id === candidate.id))
+      const [card, rest] = draw(deck.filter((candidate) => !hand.some((held) => held.id === candidate.id)), recycle)
       hand = [...hand, card]
       deck = rest
     }
@@ -511,29 +772,32 @@ export function continueRound(game: GameState): GameState {
 }
 
 export function nextSituation(game: GameState): GameState {
-  let needDeck = game.needDeck
-  let situationDeck = game.situationDeck
+  const heldStrategyIds = new Set(game.cognitions.flatMap((cognition) => cognition.hand.map((card) => card.id)))
+  let strategyDeck = shuffle(allStrategyCards.filter((card) => !heldStrategyIds.has(card.id)))
+  let needDeck = shuffle(needs)
+  let situationDeck = shuffle(game.situationDeck.length ? game.situationDeck : situations.filter((card) => card.id !== game.situation.id))
   let situation: SituationCard
   ;[situation, situationDeck] = draw(situationDeck, situations.filter((card) => card.id !== game.situation.id))
 
   const refreshed = game.cognitions.map((cognition) => {
     let privateNeed = cognition.privateNeed
+    const excluded = new Set<string>()
     if (privateNeed.gifts === 0) {
       let card: NeedCard
-      ;[card, needDeck] = draw(needDeck, needs)
+      ;[card, needDeck] = drawNeedAvoiding(needDeck, excluded)
       privateNeed = { card, gifts: 1, setup: baseSetup() }
     }
+    excluded.add(privateNeed.card.id)
     const publicNeeds: NeedSlot[] = []
     while (publicNeeds.length < 2) {
       let card: NeedCard
-      ;[card, needDeck] = draw(needDeck, needs)
-      if (card.id !== privateNeed.card.id && !publicNeeds.some((slot) => slot.card.id === card.id)) {
-        publicNeeds.push({ card, gifts: 1, setup: baseSetup() })
-      }
+      ;[card, needDeck] = drawNeedAvoiding(needDeck, new Set([...excluded, ...publicNeeds.map((slot) => slot.card.id)]))
+      publicNeeds.push({ card, gifts: 1, setup: baseSetup() })
     }
     return { ...cognition, privateNeed, publicNeeds, selected: null, privateVisible: false, magnifierUsed: false }
   })
-  const [withHands, strategyDeck] = refill(refreshed, game.strategyDeck)
+  const [withHands, remainingStrategyDeck] = refill(refreshed, strategyDeck)
+  strategyDeck = remainingStrategyDeck
   return {
     ...game,
     cognitions: applySituation(withHands, situation),

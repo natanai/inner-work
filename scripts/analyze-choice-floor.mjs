@@ -37,15 +37,17 @@ function shuffle(items, rng) {
   return result
 }
 
+function effectsFor(card, event) {
+  if (card.special) return []
+  return event ? [...card.effects, ...card.eventEffects] : card.effects
+}
+
 function strength(card, need, event) {
-  if (card.special) return 0
-  const effects = event ? [...card.effects, ...card.eventEffects] : card.effects
-  return effects.filter(([name, amount]) => name === need && amount > 0).reduce((sum, [, amount]) => sum + amount, 0)
+  return effectsFor(card, event).filter(([name, amount]) => name === need && amount > 0).reduce((sum, [, amount]) => sum + amount, 0)
 }
 
 function legal(card, publicNeeds, situation) {
-  if (card.special) return false
-  return publicNeeds.some((need) => strength(card, need.need, situation.event) > 0)
+  return !card.special && publicNeeds.some((need) => strength(card, need.need, situation.event) > 0)
 }
 
 function directedTrades(playerHand, npcHands, publicByCognition, situation) {
@@ -57,9 +59,7 @@ function directedTrades(playerHand, npcHands, publicByCognition, situation) {
       for (const payment of playerHand) {
         if (!legal(payment, npcNeeds, situation)) continue
         for (const target of publicByCognition[0]) {
-          if (strength(offered, target.need, situation.event) > 0) {
-            paths.add(`${npcIndex}:${offered.id}:${target.need}`)
-          }
+          if (strength(offered, target.need, situation.event) > 0) paths.add(`${npcIndex}:${offered.id}:${target.need}`)
         }
       }
     }
@@ -67,26 +67,56 @@ function directedTrades(playerHand, npcHands, publicByCognition, situation) {
   return paths.size
 }
 
-function bucket(value) {
-  return value >= 4 ? '4+' : String(value)
+function positiveNeedCount(card, event) {
+  return new Set(effectsFor(card, event).filter(([, amount]) => amount > 0).map(([need]) => need)).size
 }
 
-function increment(map, key) {
-  map[key] = (map[key] ?? 0) + 1
+function specialActionPaths(hand, publicByCognition, privateByCognition, situation) {
+  const ordinary = hand.filter((card) => !card.special)
+  let paths = 0
+  for (const special of hand.filter((card) => card.special)) {
+    switch (special.id) {
+      case 'SA1':
+        paths += publicByCognition.flat().length
+        break
+      case 'SA2':
+      case 'SA3':
+        paths += ordinary.filter((card) => strength(card, privateByCognition[0].need, situation.event) > 0).length
+        break
+      case 'SA4':
+      case 'SA5':
+        paths += 1
+        break
+      case 'SA6':
+        paths += ordinary.filter((card) => card.eventEffects.length > 0).length
+        break
+      case 'SA7':
+        paths += ordinary.reduce((total, card) => total + positiveNeedCount(card, situation.event), 0)
+        break
+    }
+  }
+  return paths
 }
+
+function bucket(value) { return value >= 4 ? '4+' : String(value) }
+function increment(map, key) { map[key] = (map[key] ?? 0) + 1 }
 
 function simulate({ trials, rounds, seed, includeSpecials }) {
   const rng = rngFrom(seed)
   const legalDistribution = {}
-  const pathDistribution = {}
-  const specialDistribution = {}
+  const pathWithoutMagnifierDistribution = {}
+  const pathWithMagnifierDistribution = {}
+  const specialCardDistribution = {}
+  const specialPathDistribution = {}
   const narrowStreaks = {}
   const needLegalCounts = Object.fromEntries([...new Set(needs.map((need) => need.need))].map((need) => [need, { seen: 0, playable: 0 }]))
 
   for (let trial = 0; trial < trials; trial += 1) {
     const situation = situations[Math.floor(rng() * situations.length)]
     const needDeck = shuffle(needs, rng)
-    const publicByCognition = [0, 1, 2].map((index) => needDeck.slice(index * 2, index * 2 + 2))
+    const needsByCognition = [0, 1, 2].map((index) => needDeck.slice(index * 3, index * 3 + 3))
+    const privateByCognition = needsByCognition.map((cards) => cards[0])
+    const publicByCognition = needsByCognition.map((cards) => cards.slice(1))
     const fullDeck = shuffle(includeSpecials ? [...strategies, ...specials] : strategies, rng)
     let cursor = 0
     let hands = [0, 1, 2].map(() => {
@@ -96,12 +126,18 @@ function simulate({ trials, rounds, seed, includeSpecials }) {
     })
 
     const playerLegal = hands[0].filter((card) => legal(card, publicByCognition[0], situation)).length
-    const specialPaths = hands[0].filter((card) => card.special).length
+    const specialCards = hands[0].filter((card) => card.special).length
+    const specialPaths = specialActionPaths(hands[0], publicByCognition, privateByCognition, situation)
     const trades = directedTrades(hands[0], hands.slice(1), publicByCognition, situation)
-    const magnifierPaths = 4
+    const requiredDiscard = playerLegal === 0 ? 1 : 0
+    const withoutMagnifier = playerLegal + specialPaths + trades + requiredDiscard
+    const withMagnifier = withoutMagnifier + 4
+
     increment(legalDistribution, bucket(playerLegal))
-    increment(specialDistribution, bucket(specialPaths))
-    increment(pathDistribution, bucket(playerLegal + specialPaths + trades + magnifierPaths))
+    increment(specialCardDistribution, bucket(specialCards))
+    increment(specialPathDistribution, bucket(specialPaths))
+    increment(pathWithoutMagnifierDistribution, bucket(withoutMagnifier))
+    increment(pathWithMagnifierDistribution, bucket(withMagnifier))
 
     for (const need of publicByCognition[0]) {
       needLegalCounts[need.need].seen += 1
@@ -115,9 +151,7 @@ function simulate({ trials, rounds, seed, includeSpecials }) {
       if (legalCards.length <= 1) {
         currentStreak += 1
         longestStreak = Math.max(longestStreak, currentStreak)
-      } else {
-        currentStreak = 0
-      }
+      } else currentStreak = 0
 
       const chosen = legalCards[Math.floor(rng() * legalCards.length)] ?? hands[0][Math.floor(rng() * hands[0].length)]
       hands[0] = hands[0].filter((card) => card.id !== chosen?.id)
@@ -139,10 +173,12 @@ function simulate({ trials, rounds, seed, includeSpecials }) {
   return {
     trials,
     roundsPerPersistentHandTest: rounds,
-    legalStrategies: normalize(legalDistribution),
-    specialActionsInHand: normalize(specialDistribution),
-    totalVisiblePathsIncludingTradesAndMagnifier: normalize(pathDistribution),
-    longestConsecutiveRoundsWithAtMostOneLegalStrategy: normalize(narrowStreaks),
+    legalOrdinaryStrategies: normalize(legalDistribution),
+    specialActionCardsInHand: normalize(specialCardDistribution),
+    targetSpecificSpecialActionPaths: normalize(specialPathDistribution),
+    visiblePathsAfterMagnifierIsSpent: normalize(pathWithoutMagnifierDistribution),
+    visiblePathsWhileMagnifierIsReady: normalize(pathWithMagnifierDistribution),
+    longestConsecutiveRoundsWithAtMostOneLegalOrdinaryStrategy: normalize(narrowStreaks),
     lowestNeedCoverage: coverage.slice(0, 8).map(({ need, rate }) => ({ need, playableHandRate: `${(rate * 100).toFixed(1)}%` })),
   }
 }
@@ -157,12 +193,14 @@ console.log(JSON.stringify({
     seed,
     notes: [
       'This is a choice-floor diagnostic, not a full score simulator.',
+      'Each Cognition is dealt one Private and two Public Needs before hands are evaluated.',
       'Public Needs remain fixed during the persistent-hand streak test so weak-card persistence is visible.',
       'Directed trades count distinct offered cards that tend one of the player’s Public Needs and have at least one legal payment for the NPC.',
-      'The complete-rulebook proxy counts a Special Action in hand as an additional path before its target-specific implementation is measured.',
+      'Special Action paths count their actual Public targets, Private-matching pairings, Event pairings, or Deep Breath effect targets without revealing any Private match in the app.',
+      'The four Magnifier categories are reported separately so they do not conceal the choice floor after the token is spent.',
       'The proposed Brainstorm Alternatives rule is not included.',
     ],
   },
   ordinaryStrategiesOnly: simulate({ trials, rounds, seed, includeSpecials: false }),
-  completeDeckProxyWithSpecialActions: simulate({ trials, rounds, seed: seed + 1, includeSpecials: true }),
+  completeRulebookDeck: simulate({ trials, rounds, seed: seed + 1, includeSpecials: true }),
 }, null, 2))

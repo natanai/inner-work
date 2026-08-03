@@ -1,12 +1,13 @@
 import type { CSSProperties } from 'react'
-import { needs, situations, strategies, type StrategyCard } from '../data/cards'
+import { needs, situations, type StrategyCard } from '../data/cards'
 import { cardBackUrl, cardFrontUrl, type CardKind } from './cardAssets'
 import type { NeedSlot } from './model'
+import { isSpecialAction, specialActionSummary, strategyCardById } from './specialActions'
 
 export type { CardKind } from './cardAssets'
 
 function cardLabel(kind: CardKind, id: string): string | null {
-  if (kind === 'strategy') return strategies.find((card) => card.id === id)?.title ?? null
+  if (kind === 'strategy') return strategyCardById(id)?.title ?? null
   if (kind === 'need') {
     const card = needs.find((item) => item.id === id)
     return card ? `${card.feeling}: ${card.need}` : null
@@ -27,6 +28,23 @@ export function CardFace({
 }) {
   const label = cardLabel(kind, id)
   if (!label) return null
+  const strategy = kind === 'strategy' ? strategyCardById(id) : null
+
+  if (strategy && isSpecialAction(strategy)) {
+    return (
+      <article
+        className={`physical-card full-card-front strategy-face special-action-face special-${strategy.id.toLowerCase()} ${className}`}
+        style={style}
+        aria-label={`${strategy.title}. ${specialActionSummary(strategy)}`}
+      >
+        <span>Special Action</span>
+        <b aria-hidden="true">✦</b>
+        <strong>{strategy.title}</strong>
+        <p>{specialActionSummary(strategy)}</p>
+        <small>{strategy.id}</small>
+      </article>
+    )
+  }
 
   return (
     <img
@@ -134,6 +152,7 @@ function effectText(need: string, amount: number): string {
 }
 
 export function strategyText(card: StrategyCard): string {
+  if (isSpecialAction(card)) return specialActionSummary(card)
   const normal = card.effects.map((effect) => effectText(effect.need, effect.amount)).join(' · ')
   const event = card.eventEffects.length ? ` Event Situation: ${card.eventEffects.map((effect) => effectText(effect.need, effect.amount)).join(' · ')}.` : ''
   return `${normal}.${event}`

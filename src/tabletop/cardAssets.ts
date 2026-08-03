@@ -1,4 +1,5 @@
 import type { GameState } from './model'
+import { isSpecialAction } from './specialActions'
 
 export type CardKind = 'strategy' | 'need' | 'situation'
 
@@ -26,11 +27,9 @@ export function gameAssetUrls(game: GameState): string[] {
   ])
 
   for (const cognition of game.cognitions) {
-    for (const slot of cognition.publicNeeds) {
-      urls.add(cardFrontUrl('need', slot.card.id))
-    }
+    for (const slot of cognition.publicNeeds) urls.add(cardFrontUrl('need', slot.card.id))
     for (const strategy of cognition.hand) {
-      urls.add(cardFrontUrl('strategy', strategy.id))
+      if (!isSpecialAction(strategy)) urls.add(cardFrontUrl('strategy', strategy.id))
     }
   }
 
@@ -38,7 +37,7 @@ export function gameAssetUrls(game: GameState): string[] {
   if (alpha) urls.add(cardFrontUrl('need', alpha.privateNeed.card.id))
 
   for (const line of game.resolution) {
-    urls.add(cardFrontUrl('strategy', line.strategy.id))
+    if (!isSpecialAction(line.strategy)) urls.add(cardFrontUrl('strategy', line.strategy.id))
   }
 
   return [...urls]

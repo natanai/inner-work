@@ -10,6 +10,7 @@ import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { MobileStoryTable } from './tabletop/MobileStoryTable'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { PrivateNeedChoiceScreen } from './tabletop/PrivateNeedChoiceScreen'
+import { SpecialActionLayer } from './tabletop/SpecialActionLayer'
 import { StickyStrategyHand } from './tabletop/StickyStrategyHand'
 import { TactileExperienceLayer } from './tabletop/TactileExperienceLayer'
 import { TradeDiscussionLayer } from './tabletop/TradeDiscussionLayer'
@@ -134,6 +135,7 @@ export default function App() {
   return <TradeDiscussionLayer game={game} onGameChange={setGame}><>
     {playScreen}
     <ChoiceSupportLayer game={game} onGameChange={setGame} />
+    <SpecialActionLayer game={game} onGameChange={setGame} />
     {!mobileStoryActive && <MobileCardExperienceLayer game={game} onGameChange={setGame} />}
     {phone && !mobileStoryActive && <MobileInventoryBank game={game} />}
     {phone && game.phase === 'planning' && <StickyStrategyHand game={game} onGameChange={setGame} />}
