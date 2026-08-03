@@ -27,8 +27,12 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
-      - name: Build
+      - name: Build stable production deck
         run: npm run build
+      - name: Compile first staged Special Action configuration
+        run: VITE_SPECIAL_ACTIONS=SA5 npx vite build --outDir dist-special-test
+      - name: Remove staged test bundle
+        run: rm -rf dist-special-test
       - name: Analyze meaningful choices
         run: npm run analyze:choices
       - name: Configure Pages
