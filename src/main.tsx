@@ -26,6 +26,7 @@ import './tabletop/mobile-story-table.css'
 import './tabletop/situation-deck-orientation.css'
 import './tabletop/mobile-deal-bank-polish.css'
 import './tabletop/docked-hand-private-sleeve.css'
+import './tabletop/strategy-contribution-details.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

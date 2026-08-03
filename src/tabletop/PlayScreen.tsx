@@ -3,6 +3,7 @@ import { CardFace, GiftIcon } from './Cards'
 import { DesktopPlayerHand, DesktopSituationTableau, type DesktopDetail, type DesktopInspection } from './DesktopTableau'
 import { DesktopStoryTable } from './DesktopStoryTable'
 import type { GameState } from './model'
+import { StrategyContributionDetails } from './StrategyContributionDetails'
 
 function DetailDialog({ game, detail, onClose }: { game: GameState; detail: DesktopDetail; onClose: () => void }) {
   if (detail.kind === 'situation') {
@@ -65,6 +66,15 @@ export function PlayScreen({ game, onChange, onNextSituation, onEnd }: {
   const [inspected, setInspected] = useState<DesktopInspection | null>(null)
   const [detail, setDetail] = useState<DesktopDetail | null>(null)
   const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
+  const inspectedResolution = inspected?.kind === 'strategy' ? game.resolution.find((line) => line.strategy.id === inspected.id) : null
+  const inspectedActor = inspectedResolution
+    ? game.cognitions.find((cognition) => cognition.id === inspectedResolution.cognitionId) ?? player
+    : player
+  const inspectedStrategy = inspected?.kind === 'strategy'
+    ? game.cognitions.flatMap((cognition) => cognition.hand).find((card) => card.id === inspected.id)
+      ?? inspectedResolution?.strategy
+      ?? null
+    : null
 
   const select = (id: string) => onChange({
     ...game,
@@ -111,6 +121,7 @@ export function PlayScreen({ game, onChange, onNextSituation, onEnd }: {
             <button className="dialog-close" onClick={() => setInspected(null)} aria-label="Close enlarged card">×</button>
             <CardFace kind={inspected.kind} id={inspected.id} className="zoomed-card" />
             {inspected.detail && <p>{inspected.detail}</p>}
+            {inspectedStrategy && <StrategyContributionDetails game={game} cognition={inspectedActor} card={inspectedStrategy} />}
           </div>
         </dialog>
       )}

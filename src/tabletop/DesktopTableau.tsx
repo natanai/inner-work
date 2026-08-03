@@ -1,6 +1,7 @@
 import type { StrategyCard } from '../data/cards'
 import { CardBack, CardFace, GiftIcon, strategyText, type CardKind } from './Cards'
 import { canPlay, type BonusNeed, type Cognition, type GameState, type NeedSlot } from './model'
+import { StrategyContributionDetails } from './StrategyContributionDetails'
 
 export type DesktopInspection = {
   kind: CardKind
@@ -150,7 +151,16 @@ export function DesktopPlayerHand({ game, onSelect, onInspect }: {
               <button className="desktop-strategy-art" onClick={() => onInspect({ kind: 'strategy', id: card.id, label: card.title, detail: strategyText(card) })}>
                 <CardFace kind="strategy" id={card.id} />
               </button>
-              <div><span>{legal ? 'Playable now' : 'Discard only'}</span><strong>{card.title}</strong><small>{strategyText(card)}</small><button onClick={() => onSelect(card.id)}>{selected ? 'Undo choice' : legal ? 'Choose Strategy' : 'Choose discard'}</button></div>
+              <div>
+                <span>{legal ? 'Playable now' : 'Discard only'}</span>
+                <strong>{card.title}</strong>
+                <small>{strategyText(card)}</small>
+                <details className="strategy-contribution-disclosure">
+                  <summary>See exact contributions</summary>
+                  <StrategyContributionDetails game={game} cognition={player} card={card} compact />
+                </details>
+                <button onClick={() => onSelect(card.id)}>{selected ? 'Undo choice' : legal ? 'Choose Strategy' : 'Choose discard'}</button>
+              </div>
             </article>
           )
         })}

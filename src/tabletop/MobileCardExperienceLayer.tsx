@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { StrategyCard } from '../data/cards'
 import { CardFace, GiftIcon, strategyText, type CardKind } from './Cards'
 import { canPlay, type Cognition, type GameState, type NeedSlot } from './model'
+import { StrategyContributionDetails } from './StrategyContributionDetails'
 
 type InspectedCard = {
   kind: CardKind
@@ -266,9 +267,13 @@ function StrategyStack({
                 <CardFace kind="strategy" id={card.id} />
               </button>
               <div className="true-stack-copy">
-                <span className={legal ? 'mobile-playable' : 'mobile-discard'}>{legal ? 'Tends your Public or a Bonus Need' : 'Discard only'}</span>
+                <span className={legal ? 'mobile-playable' : 'mobile-discard'}>{legal ? 'Playable now' : 'Discard only'}</span>
                 <h2>{card.title}</h2>
                 <p>{strategyText(card)}</p>
+                <details className="strategy-contribution-disclosure">
+                  <summary>See exact contributions</summary>
+                  <StrategyContributionDetails game={game} cognition={player} card={card} compact />
+                </details>
                 <button className="mobile-choose-strategy" onClick={() => select(card)} aria-pressed={selected} tabIndex={active ? 0 : -1}>
                   {selected ? 'Chosen — tap to undo' : legal ? 'Choose this Strategy' : 'Choose to discard'}
                 </button>
@@ -321,13 +326,19 @@ function NeedGalleryRow({
   )
 }
 
-function CardInspector({ inspected, onClose }: { inspected: InspectedCard; onClose: () => void }) {
+function CardInspector({ game, inspected, onClose }: { game: GameState; inspected: InspectedCard; onClose: () => void }) {
+  const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
+  const strategy = inspected.kind === 'strategy' ? player.hand.find((card) => card.id === inspected.id) : null
   return (
     <dialog open className="mobile-card-dialog true-card-inspector" onClick={onClose} aria-label={inspected.label}>
       <div className={`mobile-dialog-inner mobile-dialog-${inspected.kind}`} onClick={(event) => event.stopPropagation()}>
         <button className="mobile-dialog-close" onClick={onClose} aria-label="Close card">×</button>
         <div className="mobile-dialog-image"><CardFace kind={inspected.kind} id={inspected.id} /></div>
-        <section><h2>{inspected.label}</h2>{inspected.detail && <p>{inspected.detail}</p>}</section>
+        <section>
+          <h2>{inspected.label}</h2>
+          {inspected.detail && <p>{inspected.detail}</p>}
+          {strategy && <StrategyContributionDetails game={game} cognition={player} card={strategy} />}
+        </section>
       </div>
     </dialog>
   )
@@ -359,7 +370,7 @@ export function MobileCardExperienceLayer({
           target,
         ) : null
       })}
-      {inspected && createPortal(<CardInspector inspected={inspected} onClose={() => setInspected(null)} />, document.body)}
+      {inspected && createPortal(<CardInspector game={game} inspected={inspected} onClose={() => setInspected(null)} />, document.body)}
     </>
   )
 }
