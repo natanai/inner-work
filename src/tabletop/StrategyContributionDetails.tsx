@@ -30,13 +30,12 @@ function PublicContribution({ match, qualification }: { match: PublicMatch; qual
 }
 
 function BonusContribution({ bonus }: { bonus: BonusMatch }) {
-  const capped = bonus.strength > bonus.gifts
   return (
     <article className="strategy-contribution-row bonus">
       <header><span>Qualifies the play · Active Bonus Need</span><b>+{bonus.strength} {bonus.need}</b></header>
       <strong>{bonus.need}</strong>
       <p>
-        This matching active Bonus Need makes the Strategy legal. The strongest matching play can receive {capped ? `the remaining ${gifts(bonus.contribution)}` : `up to ${gifts(bonus.contribution)}`} from its {gifts(bonus.gifts)}.
+        This matching active Bonus Need makes the Strategy legal. The strongest matching play can receive up to {gifts(bonus.contribution)} of the {gifts(bonus.gifts)} currently on it.
         {eventNote(bonus.eventStrength)}
       </p>
     </article>
@@ -100,8 +99,6 @@ export function StrategyContributionDetails({
       {!hasQualification && !hasOtherPublic && analysis.createdBonuses.length === 0 && (
         <p className="strategy-contribution-empty">None of this card’s effects currently connect to a visible Public or active Bonus Need.</p>
       )}
-
-      <small className="strategy-private-privacy">Private Need matches are intentionally not shown here.</small>
     </section>
   )
 }
