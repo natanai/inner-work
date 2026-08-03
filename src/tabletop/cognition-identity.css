@@ -1,0 +1,79 @@
+:root {
+  --cognition-alpha: #984a37;
+  --cognition-beta: #62774e;
+  --cognition-gamma: #89734c;
+  --cognition-token-ink: #fff9e9;
+}
+
+.strategy-cognition-token.owner-alpha,
+.owner-alpha .situation-need-owner,
+.owner-alpha .desktop-owner-token,
+.desktop-cognition-column.owner-alpha > header > b,
+.true-need-owner-alpha .true-need-owner-badge,
+.mobile-cognition-list article.owner-alpha > b,
+.cognition-identity-token.owner-alpha,
+.mobile-bank-personal > b {
+  background: var(--cognition-alpha) !important;
+  color: var(--cognition-token-ink) !important;
+}
+
+.strategy-cognition-token.owner-beta,
+.owner-beta .situation-need-owner,
+.owner-beta .desktop-owner-token,
+.desktop-cognition-column.owner-beta > header > b,
+.true-need-owner-beta .true-need-owner-badge,
+.mobile-cognition-list article.owner-beta > b,
+.cognition-identity-token.owner-beta {
+  background: var(--cognition-beta) !important;
+  color: var(--cognition-token-ink) !important;
+}
+
+.strategy-cognition-token.owner-gamma,
+.owner-gamma .situation-need-owner,
+.owner-gamma .desktop-owner-token,
+.desktop-cognition-column.owner-gamma > header > b,
+.true-need-owner-gamma .true-need-owner-badge,
+.mobile-cognition-list article.owner-gamma > b,
+.cognition-identity-token.owner-gamma {
+  background: var(--cognition-gamma) !important;
+  color: var(--cognition-token-ink) !important;
+}
+
+.cognition-identity-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cognition-identity-token {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  font: 800 .82rem/1 'Fraunces', serif;
+}
+
+.cognition-role-name {
+  display: grid;
+  min-width: 0;
+}
+
+.cognition-role-name > small,
+.cognition-role-name > span {
+  color: inherit;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .065em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.cognition-role-name > strong {
+  overflow: hidden;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
