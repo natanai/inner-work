@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Cognition, GameState } from './model'
 import { CardBack, CardFace, GiftIcon, type CardKind } from './Cards'
+import { cognitionIdentity } from './cognitionIdentity'
 import { Deck } from './DealScreen'
 
 type InspectedCard = {
@@ -9,20 +10,19 @@ type InspectedCard = {
   label: string
 }
 
-function MobileCognitionDeal({
-  cognition,
-  human,
-  step,
-  onInspect,
-}: {
+function MobileCognitionDeal({ cognition, human, step, onInspect }: {
   cognition: Cognition
   human: boolean
   step: number
   onInspect: (card: InspectedCard) => void
 }) {
+  const identity = cognitionIdentity(cognition)
   return (
-    <section className={`mobile-deal-cognition ${human ? 'human' : ''} ${step >= 2 ? 'visible' : ''}`}>
-      <header><span>{human ? 'You' : 'NPC'}</span><strong>{cognition.name}</strong></header>
+    <section className={`mobile-deal-cognition owner-${cognition.id} ${human ? 'human' : ''} ${step >= 2 ? 'visible' : ''}`}>
+      <header className="cognition-identity-line">
+        <b className={`cognition-identity-token owner-${cognition.id}`}>{identity.symbol}</b>
+        <div className="cognition-role-name"><small>{identity.role}</small><strong>{identity.name}</strong></div>
+      </header>
       <div className="mobile-deal-need-row">
         {cognition.publicNeeds.map((slot) => (
           <div key={slot.card.id} className="mobile-deal-need">
@@ -85,11 +85,7 @@ export function MobileDealScreen({ game, onDone }: { game: GameState; onDone: ()
 
         {step >= 1 && (
           <section className="mobile-deal-situation">
-            <button
-              className="mobile-deal-card-button"
-              onClick={() => setInspected({ kind: 'situation', id: game.situation.id, label: game.situation.title })}
-              aria-label={`Inspect ${game.situation.title}`}
-            >
+            <button className="mobile-deal-card-button" onClick={() => setInspected({ kind: 'situation', id: game.situation.id, label: game.situation.title })} aria-label={`Inspect ${game.situation.title}`}>
               <CardFace kind="situation" id={game.situation.id} />
             </button>
             <div><span>Situation</span><strong>{game.situation.title}</strong></div>
