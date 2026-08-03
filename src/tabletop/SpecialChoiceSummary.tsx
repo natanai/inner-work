@@ -25,25 +25,18 @@ function positiveEffects(card: Cognition['hand'][number], eventActive: boolean):
 function pathsForSpecial(game: GameState, player: Cognition, card: SpecialActionCard): number {
   const ordinary = player.hand.filter((item) => !isSpecialAction(item))
   switch (card.id) {
-    case 'SA1':
-      return game.cognitions.flatMap((cognition) => cognition.publicNeeds).filter((slot) => slot.gifts > 0).length
+    case 'SA1': return game.cognitions.flatMap((cognition) => cognition.publicNeeds).filter((slot) => slot.gifts > 0).length
     case 'SA2':
-    case 'SA3':
-      return ordinary.length > 0 ? 1 : 0
+    case 'SA3': return ordinary.length > 0 ? 1 : 0
     case 'SA4':
-    case 'SA5':
-      return 1
-    case 'SA6':
-      return ordinary.some((strategy) => strategy.eventEffects.length > 0) ? 1 : 0
-    case 'SA7':
-      return ordinary.reduce((total, strategy) => total + positiveEffects(strategy, game.situation.event), 0)
+    case 'SA5': return 1
+    case 'SA6': return ordinary.some((strategy) => strategy.eventEffects.length > 0) ? 1 : 0
+    case 'SA7': return ordinary.reduce((total, strategy) => total + positiveEffects(strategy, game.situation.event), 0)
   }
 }
 
 export function specialActionPathCount(game: GameState, player: Cognition): number {
-  return player.hand
-    .filter(isSpecialAction)
-    .reduce((total, card) => total + pathsForSpecial(game, player, card), 0)
+  return player.hand.filter(isSpecialAction).reduce((total, card) => total + pathsForSpecial(game, player, card), 0)
 }
 
 export function SpecialChoiceSummary({ game }: { game: GameState }) {
@@ -52,7 +45,7 @@ export function SpecialChoiceSummary({ game }: { game: GameState }) {
   const legal = useMemo(() => player.hand.filter((card) => !isSpecialAction(card) && canPlayCommitted(game, player, card)).length, [game, player])
   const trades = useMemo(() => distinctDirectedTradePaths(game), [game])
   const specials = useMemo(() => specialActionPathCount(game, player), [game, player])
-  const magnifier = player.magnifierUsed ? 0 : 4
+  const magnifier: number = player.magnifierUsed ? 0 : 4
   const discard = legal === 0 ? 1 : 0
   const total = legal + trades + specials + magnifier + discard
 
