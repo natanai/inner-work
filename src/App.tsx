@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CardBack } from './tabletop/Cards'
+import { ChoiceSupportLayer } from './tabletop/ChoiceSupportLayer'
 import { preloadGameAssets } from './tabletop/cardAssets'
 import { DealScreen } from './tabletop/DealScreen'
 import { MobileCardExperienceLayer } from './tabletop/MobileCardExperienceLayer'
@@ -132,6 +133,7 @@ export default function App() {
 
   return <TradeDiscussionLayer game={game} onGameChange={setGame}><>
     {playScreen}
+    <ChoiceSupportLayer game={game} onGameChange={setGame} />
     {!mobileStoryActive && <MobileCardExperienceLayer game={game} onGameChange={setGame} />}
     {phone && !mobileStoryActive && <MobileInventoryBank game={game} />}
     {phone && game.phase === 'planning' && <StickyStrategyHand game={game} onGameChange={setGame} />}
