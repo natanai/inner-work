@@ -4,11 +4,11 @@ import type { GameState } from './model'
 export function MobileInventoryBank({ game }: { game: GameState }) {
   const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
   const personalScore = player.privateScore + player.bonusScore
-  const magnifierReady = game.phase === 'planning' && !player.magnifierUsed && player.privateNeed.gifts > 0
+  const magnifierReady = game.phase === 'planning' && !player.magnifierUsed
 
-  const reviewPrivateNeed = () => {
+  const openMagnifier = () => {
     if (!magnifierReady) return
-    window.dispatchEvent(new Event('inner-work:review-private'))
+    window.dispatchEvent(new Event('inner-work:open-magnifier'))
   }
 
   return (
@@ -29,8 +29,8 @@ export function MobileInventoryBank({ game }: { game: GameState }) {
         className={`mobile-bank-item mobile-bank-magnifier ${player.magnifierUsed ? 'used' : ''}`}
         type="button"
         disabled={!magnifierReady}
-        onClick={reviewPrivateNeed}
-        aria-label={player.magnifierUsed ? 'Magnifying glass already used this Situation' : 'Use the magnifying glass to review your Private Need'}
+        onClick={openMagnifier}
+        aria-label={player.magnifierUsed ? 'Magnifying glass already used this Situation' : 'Choose one of four Magnifying Glass actions'}
       >
         <svg viewBox="0 0 36 36" aria-hidden="true">
           <circle cx="15" cy="15" r="9" />

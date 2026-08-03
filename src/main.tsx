@@ -28,6 +28,7 @@ import './tabletop/mobile-deal-bank-polish.css'
 import './tabletop/docked-hand-private-sleeve.css'
 import './tabletop/strategy-contribution-details.css'
 import './tabletop/cognition-identity.css'
+import './tabletop/choice-support.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
