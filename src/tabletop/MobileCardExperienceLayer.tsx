@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { createPortal } from 'react-dom'
 import type { StrategyCard } from '../data/cards'
 import { CardFace, GiftIcon, strategyText, type CardKind } from './Cards'
+import { cognitionSymbol } from './cognitionIdentity'
 import { canPlay, type Cognition, type GameState, type NeedSlot } from './model'
-import { StrategyContributionDetails } from './StrategyContributionDetails'
+import { StrategyContributionDetails, StrategyQuickSummary } from './StrategyContributionDetails'
 
 type InspectedCard = {
   kind: CardKind
@@ -22,12 +23,6 @@ type GestureAxis = 'pending' | 'horizontal' | 'vertical'
 type PointerStart = {
   x: number
   y: number
-}
-
-function cognitionSymbol(cognition: Cognition): string {
-  if (cognition.id === 'alpha') return 'α'
-  if (cognition.id === 'beta') return 'β'
-  return 'γ'
 }
 
 function activeBonuses(game: GameState) {
@@ -179,9 +174,7 @@ function StrategyStack({
         gestureAxis.current = 'horizontal'
         moved.current = true
         setDragging(true)
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.setPointerCapture(event.pointerId)
-        }
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId)
       }
     }
 
@@ -237,10 +230,7 @@ function StrategyStack({
           const selected = card.id === player.selected
           const legal = canPlay(player, card, bonuses)
           const style: CSSProperties = active
-            ? {
-                zIndex: cards.length + 4,
-                transform: `translateX(${dragX}px) rotate(${dragX / 34}deg)`,
-              }
+            ? { zIndex: cards.length + 4, transform: `translateX(${dragX}px) rotate(${dragX / 34}deg)` }
             : {
                 zIndex: cards.length - visibleOffset,
                 transform: `translate(${visibleOffset * 8}px, ${visibleOffset * -8}px) rotate(${visibleOffset % 2 === 0 ? -.55 : .55}deg) scale(${1 - visibleOffset * .012})`,
@@ -267,11 +257,11 @@ function StrategyStack({
                 <CardFace kind="strategy" id={card.id} />
               </button>
               <div className="true-stack-copy">
-                <span className={legal ? 'mobile-playable' : 'mobile-discard'}>{legal ? 'Playable now' : 'Discard only'}</span>
+                <StrategyQuickSummary game={game} cognition={player} card={card} />
                 <h2>{card.title}</h2>
                 <p>{strategyText(card)}</p>
                 <details className="strategy-contribution-disclosure">
-                  <summary>See exact contributions</summary>
+                  <summary>More contribution details</summary>
                   <StrategyContributionDetails game={game} cognition={player} card={card} compact />
                 </details>
                 <button className="mobile-choose-strategy" onClick={() => select(card)} aria-pressed={selected} tabIndex={active ? 0 : -1}>
@@ -292,13 +282,7 @@ function StrategyStack({
   )
 }
 
-function NeedGalleryRow({
-  cognition,
-  onInspect,
-}: {
-  cognition: Cognition
-  onInspect: (card: InspectedCard) => void
-}) {
+function NeedGalleryRow({ cognition, onInspect }: { cognition: Cognition; onInspect: (card: InspectedCard) => void }) {
   return (
     <section className={`true-need-gallery-row true-need-owner-${cognition.id}`}>
       <header><span>Public Need cards</span></header>
@@ -307,12 +291,7 @@ function NeedGalleryRow({
           <button
             className={`true-public-need-card ${slot.gifts === 0 ? 'tended' : ''}`}
             key={slot.card.id}
-            onClick={() => onInspect({
-              kind: 'need',
-              id: slot.card.id,
-              label: `${slot.card.feeling}: ${slot.card.need}`,
-              detail: giftDetailText(slot),
-            })}
+            onClick={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}`, detail: giftDetailText(slot) })}
           >
             <span className="true-need-owner-badge">{cognitionSymbol(cognition)}</span>
             <CardFace kind="need" id={slot.card.id} />
@@ -335,22 +314,22 @@ function CardInspector({ game, inspected, onClose }: { game: GameState; inspecte
         <button className="mobile-dialog-close" onClick={onClose} aria-label="Close card">×</button>
         <div className="mobile-dialog-image"><CardFace kind={inspected.kind} id={inspected.id} /></div>
         <section>
+          {strategy && <StrategyQuickSummary game={game} cognition={player} card={strategy} />}
           <h2>{inspected.label}</h2>
           {inspected.detail && <p>{inspected.detail}</p>}
-          {strategy && <StrategyContributionDetails game={game} cognition={player} card={strategy} />}
+          {strategy && (
+            <details className="strategy-contribution-disclosure">
+              <summary>More contribution details</summary>
+              <StrategyContributionDetails game={game} cognition={player} card={strategy} compact />
+            </details>
+          )}
         </section>
       </div>
     </dialog>
   )
 }
 
-export function MobileCardExperienceLayer({
-  game,
-  onGameChange,
-}: {
-  game: GameState
-  onGameChange: (game: GameState) => void
-}) {
+export function MobileCardExperienceLayer({ game, onGameChange }: { game: GameState; onGameChange: (game: GameState) => void }) {
   const targets = useMobilePortalTargets()
   const [inspected, setInspected] = useState<InspectedCard | null>(null)
   const phone = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches, [])
@@ -365,10 +344,7 @@ export function MobileCardExperienceLayer({
       )}
       {targets.needs.map((target, index) => {
         const cognition = game.cognitions[index]
-        return cognition ? createPortal(
-          <NeedGalleryRow cognition={cognition} onInspect={setInspected} />,
-          target,
-        ) : null
+        return cognition ? createPortal(<NeedGalleryRow cognition={cognition} onInspect={setInspected} />, target) : null
       })}
       {inspected && createPortal(<CardInspector game={game} inspected={inspected} onClose={() => setInspected(null)} />, document.body)}
     </>

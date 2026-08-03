@@ -3,7 +3,7 @@ import { CardFace, GiftIcon } from './Cards'
 import { DesktopPlayerHand, DesktopSituationTableau, type DesktopDetail, type DesktopInspection } from './DesktopTableau'
 import { DesktopStoryTable } from './DesktopStoryTable'
 import type { GameState } from './model'
-import { StrategyContributionDetails } from './StrategyContributionDetails'
+import { StrategyContributionDetails, StrategyQuickSummary } from './StrategyContributionDetails'
 
 function DetailDialog({ game, detail, onClose }: { game: GameState; detail: DesktopDetail; onClose: () => void }) {
   if (detail.kind === 'situation') {
@@ -94,9 +94,7 @@ export function PlayScreen({ game, onChange, onNextSituation, onEnd }: {
 
       <DesktopSituationTableau game={game} onInspect={setInspected} onDetail={setDetail} onReviewPrivate={reviewPrivate} />
 
-      {game.phase === 'planning' && (
-        <DesktopPlayerHand game={game} onSelect={select} onInspect={setInspected} />
-      )}
+      {game.phase === 'planning' && <DesktopPlayerHand game={game} onSelect={select} onInspect={setInspected} />}
 
       {game.phase === 'planning' && (
         <footer className="desktop-action-bar">
@@ -120,8 +118,14 @@ export function PlayScreen({ game, onChange, onNextSituation, onEnd }: {
           <div className={`card-dialog-inner zoom-${inspected.kind}`} onClick={(event) => event.stopPropagation()}>
             <button className="dialog-close" onClick={() => setInspected(null)} aria-label="Close enlarged card">×</button>
             <CardFace kind={inspected.kind} id={inspected.id} className="zoomed-card" />
+            {inspectedStrategy && <StrategyQuickSummary game={game} cognition={inspectedActor} card={inspectedStrategy} />}
             {inspected.detail && <p>{inspected.detail}</p>}
-            {inspectedStrategy && <StrategyContributionDetails game={game} cognition={inspectedActor} card={inspectedStrategy} />}
+            {inspectedStrategy && (
+              <details className="strategy-contribution-disclosure">
+                <summary>More contribution details</summary>
+                <StrategyContributionDetails game={game} cognition={inspectedActor} card={inspectedStrategy} compact />
+              </details>
+            )}
           </div>
         </dialog>
       )}

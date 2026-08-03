@@ -1,7 +1,8 @@
 import type { StrategyCard } from '../data/cards'
 import { CardBack, CardFace, GiftIcon, strategyText, type CardKind } from './Cards'
+import { cognitionIdentity, cognitionSymbol } from './cognitionIdentity'
 import { canPlay, type BonusNeed, type Cognition, type GameState, type NeedSlot } from './model'
-import { StrategyContributionDetails } from './StrategyContributionDetails'
+import { StrategyContributionDetails, StrategyQuickSummary } from './StrategyContributionDetails'
 
 export type DesktopInspection = {
   kind: CardKind
@@ -14,12 +15,6 @@ export type DesktopDetail =
   | { kind: 'situation' }
   | { kind: 'need'; cognition: Cognition; slot: NeedSlot }
   | { kind: 'bonus'; bonus: BonusNeed }
-
-function symbol(cognition: Cognition): string {
-  if (cognition.id === 'alpha') return 'α'
-  if (cognition.id === 'beta') return 'β'
-  return 'γ'
-}
 
 function setupSummary(slot: NeedSlot): string {
   const pieces = [`Base ${slot.setup.base}`]
@@ -38,7 +33,7 @@ function NeedCard({ cognition, slot, onInspect, onDetail }: {
     <article className={`desktop-need-card owner-${cognition.id} ${slot.gifts === 0 ? 'complete' : ''}`}>
       <button className="desktop-need-art" onClick={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}` })}>
         <CardFace kind="need" id={slot.card.id} />
-        <span className="desktop-owner-token">{symbol(cognition)}</span>
+        <span className="desktop-owner-token">{cognitionSymbol(cognition)}</span>
         <span className="desktop-gift-token"><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} /><b>{slot.gifts}</b></span>
       </button>
       <button className="desktop-need-caption" onClick={() => onDetail({ kind: 'need', cognition, slot })}>
@@ -56,11 +51,12 @@ function CognitionColumn({ cognition, onInspect, onDetail, onReviewPrivate }: {
   onDetail: (detail: DesktopDetail) => void
   onReviewPrivate: () => void
 }) {
+  const identity = cognitionIdentity(cognition)
   return (
     <section className={`desktop-cognition-column owner-${cognition.id}`}>
       <header>
-        <b>{symbol(cognition)}</b>
-        <div><span>{cognition.human ? 'You' : 'NPC'}</span><strong>{cognition.name}</strong></div>
+        <b>{identity.symbol}</b>
+        <div><span>{identity.role}</span><strong>{identity.name}</strong></div>
         <small>{cognition.privateScore + cognition.bonusScore} individual</small>
       </header>
       <div className="desktop-cognition-needs">
@@ -152,11 +148,11 @@ export function DesktopPlayerHand({ game, onSelect, onInspect }: {
                 <CardFace kind="strategy" id={card.id} />
               </button>
               <div>
-                <span>{legal ? 'Playable now' : 'Discard only'}</span>
+                <StrategyQuickSummary game={game} cognition={player} card={card} />
                 <strong>{card.title}</strong>
                 <small>{strategyText(card)}</small>
                 <details className="strategy-contribution-disclosure">
-                  <summary>See exact contributions</summary>
+                  <summary>More contribution details</summary>
                   <StrategyContributionDetails game={game} cognition={player} card={card} compact />
                 </details>
                 <button onClick={() => onSelect(card.id)}>{selected ? 'Undo choice' : legal ? 'Choose Strategy' : 'Choose discard'}</button>

@@ -1,0 +1,135 @@
+:root {
+  --cognition-alpha: #984a37;
+  --cognition-beta: #62774e;
+  --cognition-gamma: #89734c;
+  --cognition-token-ink: #fff9e9;
+}
+
+.strategy-cognition-token.owner-alpha,
+.owner-alpha .situation-need-owner,
+.owner-alpha .desktop-owner-token,
+.desktop-cognition-column.owner-alpha > header > b,
+.true-need-owner-alpha .true-need-owner-badge,
+.mobile-cognition-list article.owner-alpha > b,
+.responsibility-card.owner-alpha > header > b,
+.cognition-identity-token.owner-alpha,
+.mobile-bank-personal > b,
+.required-needs-grid > .situation-need-tile:nth-child(-n+2) .situation-need-owner,
+.mobile-cognition-list > article:nth-child(1) > b {
+  background: var(--cognition-alpha) !important;
+  color: var(--cognition-token-ink) !important;
+}
+
+.strategy-cognition-token.owner-beta,
+.owner-beta .situation-need-owner,
+.owner-beta .desktop-owner-token,
+.desktop-cognition-column.owner-beta > header > b,
+.true-need-owner-beta .true-need-owner-badge,
+.mobile-cognition-list article.owner-beta > b,
+.responsibility-card.owner-beta > header > b,
+.cognition-identity-token.owner-beta,
+.required-needs-grid > .situation-need-tile:nth-child(3) .situation-need-owner,
+.required-needs-grid > .situation-need-tile:nth-child(4) .situation-need-owner,
+.mobile-cognition-list > article:nth-child(2) > b {
+  background: var(--cognition-beta) !important;
+  color: var(--cognition-token-ink) !important;
+}
+
+.strategy-cognition-token.owner-gamma,
+.owner-gamma .situation-need-owner,
+.owner-gamma .desktop-owner-token,
+.desktop-cognition-column.owner-gamma > header > b,
+.true-need-owner-gamma .true-need-owner-badge,
+.mobile-cognition-list article.owner-gamma > b,
+.responsibility-card.owner-gamma > header > b,
+.cognition-identity-token.owner-gamma,
+.required-needs-grid > .situation-need-tile:nth-child(5) .situation-need-owner,
+.required-needs-grid > .situation-need-tile:nth-child(6) .situation-need-owner,
+.mobile-cognition-list > article:nth-child(3) > b {
+  background: var(--cognition-gamma) !important;
+  color: var(--cognition-token-ink) !important;
+}
+
+.cognition-identity-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.cognition-identity-token {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  font: 800 .82rem/1 'Fraunces', serif;
+}
+
+.cognition-role-name {
+  display: grid;
+  min-width: 0;
+}
+
+.cognition-role-name > small,
+.cognition-role-name > span {
+  color: inherit;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .065em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.cognition-role-name > strong {
+  overflow: hidden;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-deal-cognition > header.cognition-identity-line {
+  justify-content: flex-start;
+}
+
+.mobile-deal-cognition > header.cognition-identity-line .cognition-role-name {
+  text-align: left;
+}
+
+.mobile-deal-cognition > header.cognition-identity-line .cognition-role-name > small {
+  opacity: .76;
+}
+
+.mobile-story-reveal-cards button.owner-alpha > strong,
+.mobile-story-turn.owner-alpha > header > span,
+.desktop-story-reveal-cards article.owner-alpha > strong,
+.desktop-story-turn.owner-alpha .desktop-story-reflection > span {
+  color: var(--cognition-alpha) !important;
+}
+
+.mobile-story-reveal-cards button.owner-beta > strong,
+.mobile-story-turn.owner-beta > header > span,
+.desktop-story-reveal-cards article.owner-beta > strong,
+.desktop-story-turn.owner-beta .desktop-story-reflection > span {
+  color: var(--cognition-beta) !important;
+}
+
+.mobile-story-reveal-cards button.owner-gamma > strong,
+.mobile-story-turn.owner-gamma > header > span,
+.desktop-story-reveal-cards article.owner-gamma > strong,
+.desktop-story-turn.owner-gamma .desktop-story-reflection > span {
+  color: var(--cognition-gamma) !important;
+}
+
+.mobile-needs-panel > .mobile-cognition-needs:nth-of-type(1) .mobile-section-heading {
+  border-left: 4px solid var(--cognition-alpha);
+}
+
+.mobile-needs-panel > .mobile-cognition-needs:nth-of-type(2) .mobile-section-heading {
+  border-left: 4px solid var(--cognition-beta);
+}
+
+.mobile-needs-panel > .mobile-cognition-needs:nth-of-type(3) .mobile-section-heading {
+  border-left: 4px solid var(--cognition-gamma);
+}

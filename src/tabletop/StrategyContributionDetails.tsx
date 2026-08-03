@@ -1,50 +1,89 @@
 import type { StrategyCard } from '../data/cards'
+import { cognitionSymbol } from './cognitionIdentity'
 import type { Cognition, GameState } from './model'
 import { analyzeStrategy, type BonusMatch, type PublicMatch } from './trading'
 
-function gifts(count: number): string {
+function giftLabel(count: number): string {
   return `${count} gift${count === 1 ? '' : 's'}`
 }
 
-function eventNote(eventStrength: number): string {
-  return eventStrength > 0 ? ` This includes +${eventStrength} activated by the current Event Situation.` : ''
+function CognitionToken({ id }: { id: PublicMatch['cognitionId'] }) {
+  return <b className={`strategy-cognition-token owner-${id}`} aria-label={`Cognition ${cognitionSymbol(id)}`}>{cognitionSymbol(id)}</b>
 }
 
-function PublicContribution({ match, qualification }: { match: PublicMatch; qualification: boolean }) {
+export function StrategyQuickSummary({ game, cognition, card }: {
+  game: GameState
+  cognition: Cognition
+  card: StrategyCard
+}) {
+  const analysis = analyzeStrategy(game, cognition, card)
+
+  if (!analysis.playable) {
+    return <span className="strategy-quick-discard">Discard only · no match for your Public or active Bonus Needs</span>
+  }
+
   return (
-    <article className={`strategy-contribution-row public owner-${match.cognitionId}`}>
-      <header>
-        <span>{qualification ? 'Qualifies the play · Your Public Need' : `${match.cognitionName} · Public Need`}</span>
-        <b>+{match.strength} {match.need}</b>
-      </header>
-      <strong>{match.feeling}: {match.need}</strong>
-      <p>
-        Adds +{match.strength} toward this Public Need. With {gifts(match.remaining)} currently remaining, this effect can account for up to {gifts(match.gifts)} when the three legal Strategies are combined.
-        {eventNote(match.eventStrength)}
-      </p>
-    </article>
+    <ul className="strategy-quick-summary" aria-label="What this playable Strategy contributes">
+      {analysis.ownPublic.map((match) => (
+        <li className={`qualifies owner-${match.cognitionId}`} key={`own:${match.cognitionId}:${match.need}`}>
+          <CognitionToken id={match.cognitionId} />
+          <span>Playable through your <strong>{match.need}</strong></span>
+          <em>+{match.strength}</em>
+        </li>
+      ))}
+      {analysis.bonusNeeds.map((bonus) => (
+        <li className="qualifies bonus" key={`bonus:${bonus.id}`}>
+          <b className="strategy-bonus-token" aria-hidden="true">✦</b>
+          <span>Playable through Bonus <strong>{bonus.need}</strong></span>
+          <em>+{bonus.strength}</em>
+        </li>
+      ))}
+      {analysis.otherPublic.map((match) => (
+        <li className={`also owner-${match.cognitionId}`} key={`other:${match.cognitionId}:${match.need}`}>
+          <CognitionToken id={match.cognitionId} />
+          <span>Also tends <strong>{match.need}</strong></span>
+          <em>+{match.strength}</em>
+        </li>
+      ))}
+      {analysis.createdBonuses.map((bonus) => (
+        <li className="creates" key={`creates:${bonus.need}`}>
+          <b className="strategy-bonus-token" aria-hidden="true">＋</b>
+          <span>Introduces Bonus <strong>{bonus.need}</strong> next round</span>
+          <em>+{bonus.gifts}</em>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-function BonusContribution({ bonus }: { bonus: BonusMatch }) {
+function PublicDetail({ match, qualification }: { match: PublicMatch; qualification: boolean }) {
   return (
-    <article className="strategy-contribution-row bonus">
-      <header><span>Qualifies the play · Active Bonus Need</span><b>+{bonus.strength} {bonus.need}</b></header>
-      <strong>{bonus.need}</strong>
-      <p>
-        This matching active Bonus Need makes the Strategy legal. Any play tied for the strongest {bonus.need} effect can receive up to {gifts(bonus.contribution)} of the {gifts(bonus.gifts)} currently on it.
-        {eventNote(bonus.eventStrength)}
-      </p>
-    </article>
+    <li className={`strategy-detail-row owner-${match.cognitionId}`}>
+      <CognitionToken id={match.cognitionId} />
+      <span>
+        <strong>{match.need}</strong>
+        <small>{qualification ? 'Makes this card playable' : `${match.cognitionName} · Public Need`}</small>
+      </span>
+      <b>+{match.strength}</b>
+      <em>{match.gifts}/{match.remaining} {giftLabel(match.remaining).replace(/^\d+ /, '')}</em>
+      {match.eventStrength > 0 && <i>Event +{match.eventStrength}</i>}
+    </li>
   )
 }
 
-export function StrategyContributionDetails({
-  game,
-  cognition,
-  card,
-  compact = false,
-}: {
+function BonusDetail({ bonus }: { bonus: BonusMatch }) {
+  return (
+    <li className="strategy-detail-row bonus">
+      <b className="strategy-bonus-token" aria-hidden="true">✦</b>
+      <span><strong>{bonus.need}</strong><small>Active Bonus · makes this card playable</small></span>
+      <b>+{bonus.strength}</b>
+      <em>up to {bonus.contribution}/{bonus.gifts} gifts</em>
+      {bonus.eventStrength > 0 && <i>Event +{bonus.eventStrength}</i>}
+    </li>
+  )
+}
+
+export function StrategyContributionDetails({ game, cognition, card, compact = false }: {
   game: GameState
   cognition: Cognition
   card: StrategyCard
@@ -56,45 +95,39 @@ export function StrategyContributionDetails({
 
   return (
     <section className={`strategy-contribution-details ${compact ? 'compact' : ''} ${analysis.playable ? 'playable' : 'discard'}`}>
-      <header className="strategy-contribution-heading">
-        <span>{analysis.playable ? 'Why this Strategy can be played' : 'Why this is discard only'}</span>
-        <strong>{analysis.playable
-          ? 'It matches one of your unresolved Public Needs or an active Bonus Need.'
-          : 'It does not match either of your unresolved Public Needs or any active Bonus Need.'}</strong>
-      </header>
+      {!analysis.playable && <p className="strategy-contribution-empty">No match with your unresolved Public Needs or an active Bonus Need.</p>}
 
       {hasQualification && (
-        <div className="strategy-contribution-group qualifying">
-          {analysis.ownPublic.map((match) => <PublicContribution key={`${match.cognitionId}:${match.need}`} match={match} qualification />)}
-          {analysis.bonusNeeds.map((bonus) => <BonusContribution key={bonus.id} bonus={bonus} />)}
+        <div className="strategy-detail-group">
+          <h3>Makes it playable</h3>
+          <ul>
+            {analysis.ownPublic.map((match) => <PublicDetail key={`${match.cognitionId}:${match.need}`} match={match} qualification />)}
+            {analysis.bonusNeeds.map((bonus) => <BonusDetail key={bonus.id} bonus={bonus} />)}
+          </ul>
         </div>
       )}
 
       {hasOtherPublic && (
-        <div className="strategy-contribution-group incidental">
-          <h3>{analysis.playable ? 'What else this shared action can tend' : 'Potential value if traded to a Cognition that can play it'}</h3>
-          {analysis.otherPublic.map((match) => <PublicContribution key={`${match.cognitionId}:${match.need}`} match={match} qualification={false} />)}
+        <div className="strategy-detail-group">
+          <h3>{analysis.playable ? 'Also tends' : 'Could help after a trade'}</h3>
+          <ul>{analysis.otherPublic.map((match) => <PublicDetail key={`${match.cognitionId}:${match.need}`} match={match} qualification={false} />)}</ul>
         </div>
       )}
 
       {analysis.createdBonuses.length > 0 && (
-        <div className="strategy-contribution-group introduced">
-          <h3>{analysis.playable ? 'What this play would introduce' : 'Additional effect if another Cognition can legally play it'}</h3>
-          {analysis.createdBonuses.map((bonus) => (
-            <article className="strategy-contribution-row created" key={bonus.need}>
-              <header><span>New Bonus Need next round</span><b>{gifts(bonus.gifts)}</b></header>
-              <strong>{bonus.need}</strong>
-              <p>
-                A legal play would introduce a Bonus Need for {bonus.need} with {gifts(bonus.gifts)} next round.
-                {bonus.eventGifts > 0 ? ` ${gifts(bonus.eventGifts)} come from the card’s Event effect, which is active in this Situation.` : ''}
-              </p>
-            </article>
-          ))}
+        <div className="strategy-detail-group">
+          <h3>Introduces next round</h3>
+          <ul>
+            {analysis.createdBonuses.map((bonus) => (
+              <li className="strategy-detail-row created" key={bonus.need}>
+                <b className="strategy-bonus-token" aria-hidden="true">＋</b>
+                <span><strong>{bonus.need}</strong><small>New Bonus Need</small></span>
+                <b>+{bonus.gifts}</b>
+                <em>{bonus.eventGifts > 0 ? `Event effect +${bonus.eventGifts}` : 'next round'}</em>
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
-
-      {!hasQualification && !hasOtherPublic && analysis.createdBonuses.length === 0 && (
-        <p className="strategy-contribution-empty">None of this card’s effects currently connect to a visible Public or active Bonus Need.</p>
       )}
     </section>
   )
