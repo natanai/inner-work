@@ -44,7 +44,7 @@ All seven source cards are active. The shared desktop/mobile configuration layer
 | **Unexpected Turn of Events** | Discussion Phase | Activate Event effects on every ordinary Strategy played that round. | Enabled and tested |
 | **Deep Breath** | Start of Play Phase | Add +3 to one selected positive effect on the paired ordinary Strategy. | Enabled and tested |
 
-`npm run test:special-actions` executes the real TypeScript engine through Vite SSR and verifies all seven effects, pairing rules, scoring, discard, and refill behavior.
+`npm run test:special-actions` executes the real TypeScript engine through Vite SSR and verifies all seven effects, pairing rules, discard, and refill behavior.
 
 ### Digital timing interpretation
 
@@ -59,7 +59,7 @@ The physical rules say cards are placed together at the end of Discussion and Sp
 | Read every Need the Strategy tends | Aligned | Visible Public and Bonus effects are itemized. Private matches are resolved without being exposed beforehand. |
 | Public gifts move to the group score | Aligned | Shown in the final Story Table movement. |
 | Private gifts go to the owner’s individual score | Aligned | Hidden identity is protected. |
-| Bonus-gift competition | **Needs a rule decision** | The physical rulebook says every player whose story tends an available Bonus Need receives those points. The current engine awards the strongest matching play, with ties all scoring. This difference predates the Special Action repair and should be resolved explicitly rather than silently treated as parity. |
+| Every player whose story tends an available Bonus Need receives those points | Aligned | Bonus Needs are non-competitive. Every legal matching Cognition receives all gifts shown on the Bonus Need; one Cognition’s contribution does not erase another’s. |
 | New Bonus Needs from ordinary Strategy effects enter next round | Aligned | Their source Strategy and Cognition are retained for the Story Table. Emergency Situation and Effective Communication are explicit immediate-placement exceptions. |
 
 ## Round and Situation transitions
@@ -84,18 +84,22 @@ These remain valid physical-table options. A future custom-deck builder could re
 
 ## Meaningful-choice floor
 
-The production app currently counts paths from:
+The app and simulator now use one canonical planning-route evaluator. A **route** is a qualitatively distinct action family; targets, payments, card subsets, and pairings are reported as configurations inside that route rather than being added together as if every minor configuration were a wholly separate kind of choice.
 
-- each legal ordinary Strategy;
-- each usable Special Action or Special Action pairing;
-- each distinct player-directed trade path;
-- the four Magnifier action categories while the token is unused; and
-- a required discard when no ordinary Strategy is legal.
+The evaluator includes:
 
-Run the development simulator with:
+- each visibly legal ordinary Strategy;
+- each distinct directed trade offer, with accepted payment cards recorded as configurations;
+- each usable Special Action, with targets or pairings recorded as configurations;
+- each available Magnifier action category, with card or Need targets recorded as configurations; and
+- a discard route when no ordinary Strategy is visibly legal.
+
+Private-Need matches and NPC permission are labeled as **uncertain possibilities**, not confirmed routes. The player-facing interface therefore preserves secrecy while the omniscient simulator can separately verify whether those possibilities actually exist.
+
+Run the deterministic analysis with:
 
 ```bash
 npm run analyze:choices
 ```
 
-The proposed `Brainstorm Alternatives` solo safety valve remains deliberately excluded until the complete written rules are measured in play.
+The proposed `Brainstorm Alternatives` solo safety valve remains deliberately excluded until the corrected complete rules and canonical route measurements are reviewed in play.
