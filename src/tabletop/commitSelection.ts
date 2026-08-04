@@ -50,8 +50,10 @@ export function committedSpecialId(cognition: Pick<Cognition, 'selected'>): stri
 
 export function setOrdinaryCommit(current: string | null, strategyId: string | null): string | null {
   const commit = parseCommit(current)
-  const target = commit.specialId === 'SA7' && commit.strategyId !== strategyId ? null : commit.target
-  return encodeCommit({ ...commit, strategyId, target })
+  const requiresStrategy = commit.specialId === 'SA2' || commit.specialId === 'SA7'
+  const specialId = requiresStrategy && !strategyId ? null : commit.specialId
+  const target = specialId === 'SA7' && commit.strategyId !== strategyId ? null : specialId ? commit.target : null
+  return encodeCommit({ strategyId, specialId, target })
 }
 
 export function setSpecialCommit(current: string | null, specialId: string | null, target: string | null = null): string | null {
@@ -61,7 +63,14 @@ export function setSpecialCommit(current: string | null, specialId: string | nul
 
 export function clearCommittedCard(current: string | null, cardId: string): string | null {
   const commit = parseCommit(current)
-  if (commit.strategyId === cardId) return encodeCommit({ ...commit, strategyId: null, target: commit.specialId === 'SA7' ? null : commit.target })
+  if (commit.strategyId === cardId) {
+    const specialRequiresStrategy = commit.specialId === 'SA2' || commit.specialId === 'SA7'
+    return encodeCommit({
+      strategyId: null,
+      specialId: specialRequiresStrategy ? null : commit.specialId,
+      target: specialRequiresStrategy ? null : commit.target,
+    })
+  }
   if (commit.specialId === cardId) return encodeCommit({ ...commit, specialId: null, target: null })
   return current
 }
