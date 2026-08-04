@@ -9,6 +9,8 @@ export type CommitSelection = {
   playForPrivate: boolean
 }
 
+type CommitInput = Omit<CommitSelection, 'playForPrivate'> & { playForPrivate?: boolean }
+
 export function parseCommit(value: string | null | undefined): CommitSelection {
   if (!value) return { strategyId: null, specialId: null, target: null, playForPrivate: false }
   if (!value.startsWith(PREFIX)) {
@@ -30,11 +32,12 @@ export function parseCommit(value: string | null | undefined): CommitSelection {
   }
 }
 
-export function encodeCommit(selection: CommitSelection): string | null {
-  if (!selection.strategyId && !selection.specialId) return null
-  if (selection.strategyId && !selection.specialId && !selection.target && !selection.playForPrivate) return selection.strategyId
-  if (!selection.strategyId && selection.specialId && !selection.target && !selection.playForPrivate) return selection.specialId
-  return `${PREFIX}${JSON.stringify(selection)}`
+export function encodeCommit(selection: CommitInput): string | null {
+  const normalized: CommitSelection = { ...selection, playForPrivate: selection.playForPrivate === true }
+  if (!normalized.strategyId && !normalized.specialId) return null
+  if (normalized.strategyId && !normalized.specialId && !normalized.target && !normalized.playForPrivate) return normalized.strategyId
+  if (!normalized.strategyId && normalized.specialId && !normalized.target && !normalized.playForPrivate) return normalized.specialId
+  return `${PREFIX}${JSON.stringify(normalized)}`
 }
 
 export function cardIsCommitted(cognition: Pick<Cognition, 'selected'>, cardId: string): boolean {
