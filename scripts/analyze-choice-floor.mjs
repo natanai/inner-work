@@ -1,206 +1,196 @@
-import { readFileSync } from 'node:fs'
+import { createServer } from 'vite'
 
-const source = readFileSync(new URL('../src/data/cards.ts', import.meta.url), 'utf8')
+const server = await createServer({
+  appType: 'custom',
+  logLevel: 'error',
+  server: { middlewareMode: true },
+})
 
-function literal(name) {
-  const match = source.match(new RegExp(`const ${name} = (\\[.*?\\]) as const`, 's'))
-  if (!match) throw new Error(`Could not read ${name} from src/data/cards.ts`)
-  return Function(`"use strict"; return (${match[1]})`)()
-}
+try {
+  const { needs, situations, strategies } = await server.ssrLoadModule('/src/data/cards.ts')
+  const { createGame } = await server.ssrLoadModule('/src/tabletop/model.ts')
+  const { enumeratePlanningPaths, summarizePlanningPaths } = await server.ssrLoadModule('/src/tabletop/planningPaths.ts')
+  const { allStrategyCards } = await server.ssrLoadModule('/src/tabletop/specialActions.ts')
 
-const needRows = literal('needRows')
-const situationRows = literal('situationRows')
-const strategyRows = literal('strategyRows')
-const specialRows = literal('specialRows')
-
-const needs = needRows.map(([id, feeling, need]) => ({ id, feeling, need }))
-const situations = situationRows.map(([id, title, effects, event, multiplier]) => ({ id, title, effects, event, multiplier }))
-const strategies = strategyRows.map(([id, title, effects, eventEffects]) => ({ id, title, effects, eventEffects, special: false }))
-const specials = specialRows.map(([id, title]) => ({ id, title, effects: [], eventEffects: [], special: true }))
-
-function rngFrom(seed) {
-  let state = seed >>> 0 || 1
-  return () => {
-    state ^= state << 13
-    state ^= state >>> 17
-    state ^= state << 5
-    return (state >>> 0) / 4294967296
+  function rngFrom(seed) {
+    let state = seed >>> 0 || 1
+    return () => {
+      state ^= state << 13
+      state ^= state >>> 17
+      state ^= state << 5
+      return (state >>> 0) / 4294967296
+    }
   }
-}
 
-function shuffle(items, rng) {
-  const result = [...items]
-  for (let index = result.length - 1; index > 0; index -= 1) {
-    const other = Math.floor(rng() * (index + 1))
-    ;[result[index], result[other]] = [result[other], result[index]]
+  function shuffle(items, rng) {
+    const result = [...items]
+    for (let index = result.length - 1; index > 0; index -= 1) {
+      const other = Math.floor(rng() * (index + 1))
+      ;[result[index], result[other]] = [result[other], result[index]]
+    }
+    return result
   }
-  return result
-}
 
-function effectsFor(card, event) {
-  if (card.special) return []
-  return event ? [...card.effects, ...card.eventEffects] : card.effects
-}
+  const slot = (card) => ({
+    card,
+    gifts: 1,
+    setup: { base: 1, situation: 0, multiplied: false, total: 1 },
+  })
 
-function strength(card, need, event) {
-  return effectsFor(card, event).filter(([name, amount]) => name === need && amount > 0).reduce((sum, [, amount]) => sum + amount, 0)
-}
+  function bucket(value) { return value >= 4 ? '4+' : String(value) }
+  function increment(map, key) { map[key] = (map[key] ?? 0) + 1 }
 
-function legal(card, publicNeeds, situation) {
-  return !card.special && publicNeeds.some((need) => strength(card, need.need, situation.event) > 0)
-}
+  function makeGame(template, situation, needsByCognition, hands, deck) {
+    const cognitions = template.cognitions.map((cognition, index) => ({
+      ...cognition,
+      human: index === 0,
+      publicNeeds: needsByCognition[index].slice(1).map(slot),
+      privateNeed: slot(needsByCognition[index][0]),
+      hand: hands[index],
+      selected: null,
+      magnifierUsed: false,
+    }))
+    return {
+      ...template,
+      cognitions,
+      situation,
+      strategyDeck: deck,
+      bonusNeeds: [],
+      round: 1,
+      phase: 'planning',
+      resolution: [],
+      roundLedger: null,
+    }
+  }
 
-function directedTrades(playerHand, npcHands, publicByCognition, situation) {
-  const paths = new Set()
-  for (let npcIndex = 0; npcIndex < npcHands.length; npcIndex += 1) {
-    const npcNeeds = publicByCognition[npcIndex + 1]
-    for (const offered of npcHands[npcIndex]) {
-      if (!legal(offered, publicByCognition[0], situation)) continue
-      for (const payment of playerHand) {
-        if (!legal(payment, npcNeeds, situation)) continue
-        for (const target of publicByCognition[0]) {
-          if (strength(offered, target.need, situation.event) > 0) paths.add(`${npcIndex}:${offered.id}:${target.need}`)
+  function simulate({ trials, rounds, seed, includeSpecials }) {
+    const rng = rngFrom(seed)
+    const template = createGame()
+    const activeDeck = includeSpecials ? allStrategyCards : strategies
+    const legalDistribution = {}
+    const knownSpentDistribution = {}
+    const visibleReadyDistribution = {}
+    const uncertainDistribution = {}
+    const specialCardDistribution = {}
+    const specialRouteDistribution = {}
+    const tradeRouteDistribution = {}
+    const narrowStreaks = {}
+    const needLegalCounts = Object.fromEntries([...new Set(needs.map((need) => need.need))].map((need) => [need, { seen: 0, playable: 0 }]))
+
+    for (let trial = 0; trial < trials; trial += 1) {
+      const situation = situations[Math.floor(rng() * situations.length)]
+      const needDeck = shuffle(needs, rng)
+      const needsByCognition = [0, 1, 2].map((index) => needDeck.slice(index * 3, index * 3 + 3))
+      const fullDeck = shuffle(activeDeck, rng)
+      let cursor = 0
+      let hands = [0, 1, 2].map(() => {
+        const hand = fullDeck.slice(cursor, cursor + 4)
+        cursor += 4
+        return hand
+      })
+      let game = makeGame(template, situation, needsByCognition, hands, fullDeck.slice(cursor))
+
+      const visiblePaths = enumeratePlanningPaths(game, { privacy: 'player' })
+      const actualPaths = enumeratePlanningPaths(game, { privacy: 'omniscient' })
+      const spentGame = {
+        ...game,
+        cognitions: game.cognitions.map((cognition, index) => index === 0 ? { ...cognition, magnifierUsed: true } : cognition),
+      }
+      const spentSummary = summarizePlanningPaths(enumeratePlanningPaths(spentGame, { privacy: 'player' }))
+      const visibleSummary = summarizePlanningPaths(visiblePaths)
+      const actualSummary = summarizePlanningPaths(actualPaths)
+      const legal = actualPaths.filter((path) => path.kind === 'strategy').length
+      const specialCards = hands[0].filter((card) => card.id.startsWith('SA')).length
+
+      increment(legalDistribution, bucket(legal))
+      increment(knownSpentDistribution, bucket(spentSummary.known))
+      increment(visibleReadyDistribution, bucket(visibleSummary.known))
+      increment(uncertainDistribution, bucket(visibleSummary.uncertain))
+      increment(specialCardDistribution, bucket(specialCards))
+      increment(specialRouteDistribution, bucket(actualSummary.special))
+      increment(tradeRouteDistribution, bucket(actualSummary.trade))
+
+      for (const need of needsByCognition[0].slice(1)) {
+        needLegalCounts[need.need].seen += 1
+        const oneNeedGame = {
+          ...game,
+          cognitions: game.cognitions.map((cognition, index) => index === 0 ? { ...cognition, publicNeeds: [slot(need)] } : cognition),
+        }
+        if (enumeratePlanningPaths(oneNeedGame, { privacy: 'omniscient' }).some((path) => path.kind === 'strategy')) {
+          needLegalCounts[need.need].playable += 1
         }
       }
-    }
-  }
-  return paths.size
-}
 
-function positiveNeedCount(card, event) {
-  return new Set(effectsFor(card, event).filter(([, amount]) => amount > 0).map(([need]) => need)).size
-}
+      let currentStreak = 0
+      let longestStreak = 0
+      for (let round = 0; round < rounds; round += 1) {
+        const strategyPaths = enumeratePlanningPaths(game, { privacy: 'omniscient' }).filter((path) => path.kind === 'strategy')
+        if (strategyPaths.length <= 1) {
+          currentStreak += 1
+          longestStreak = Math.max(longestStreak, currentStreak)
+        } else currentStreak = 0
 
-function specialActionPaths(hand, publicByCognition, privateByCognition, situation) {
-  const ordinary = hand.filter((card) => !card.special)
-  let paths = 0
-  for (const special of hand.filter((card) => card.special)) {
-    switch (special.id) {
-      case 'SA1':
-        paths += publicByCognition.flat().length
-        break
-      case 'SA2':
-      case 'SA3':
-        paths += ordinary.filter((card) => strength(card, privateByCognition[0].need, situation.event) > 0).length
-        break
-      case 'SA4':
-      case 'SA5':
-        paths += 1
-        break
-      case 'SA6':
-        paths += ordinary.filter((card) => card.eventEffects.length > 0).length
-        break
-      case 'SA7':
-        paths += ordinary.reduce((total, card) => total + positiveNeedCount(card, situation.event), 0)
-        break
-    }
-  }
-  return paths
-}
-
-function bucket(value) { return value >= 4 ? '4+' : String(value) }
-function increment(map, key) { map[key] = (map[key] ?? 0) + 1 }
-
-function simulate({ trials, rounds, seed, includeSpecials }) {
-  const rng = rngFrom(seed)
-  const legalDistribution = {}
-  const pathWithoutMagnifierDistribution = {}
-  const pathWithMagnifierDistribution = {}
-  const specialCardDistribution = {}
-  const specialPathDistribution = {}
-  const narrowStreaks = {}
-  const needLegalCounts = Object.fromEntries([...new Set(needs.map((need) => need.need))].map((need) => [need, { seen: 0, playable: 0 }]))
-
-  for (let trial = 0; trial < trials; trial += 1) {
-    const situation = situations[Math.floor(rng() * situations.length)]
-    const needDeck = shuffle(needs, rng)
-    const needsByCognition = [0, 1, 2].map((index) => needDeck.slice(index * 3, index * 3 + 3))
-    const privateByCognition = needsByCognition.map((cards) => cards[0])
-    const publicByCognition = needsByCognition.map((cards) => cards.slice(1))
-    const fullDeck = shuffle(includeSpecials ? [...strategies, ...specials] : strategies, rng)
-    let cursor = 0
-    let hands = [0, 1, 2].map(() => {
-      const hand = fullDeck.slice(cursor, cursor + 4)
-      cursor += 4
-      return hand
-    })
-
-    const playerLegal = hands[0].filter((card) => legal(card, publicByCognition[0], situation)).length
-    const specialCards = hands[0].filter((card) => card.special).length
-    const specialPaths = specialActionPaths(hands[0], publicByCognition, privateByCognition, situation)
-    const trades = directedTrades(hands[0], hands.slice(1), publicByCognition, situation)
-    const requiredDiscard = playerLegal === 0 ? 1 : 0
-    const withoutMagnifier = playerLegal + specialPaths + trades + requiredDiscard
-    const withMagnifier = withoutMagnifier + 4
-
-    increment(legalDistribution, bucket(playerLegal))
-    increment(specialCardDistribution, bucket(specialCards))
-    increment(specialPathDistribution, bucket(specialPaths))
-    increment(pathWithoutMagnifierDistribution, bucket(withoutMagnifier))
-    increment(pathWithMagnifierDistribution, bucket(withMagnifier))
-
-    for (const need of publicByCognition[0]) {
-      needLegalCounts[need.need].seen += 1
-      if (hands[0].some((card) => legal(card, [need], situation))) needLegalCounts[need.need].playable += 1
-    }
-
-    let currentStreak = 0
-    let longestStreak = 0
-    for (let round = 0; round < rounds; round += 1) {
-      const legalCards = hands[0].filter((card) => legal(card, publicByCognition[0], situation))
-      if (legalCards.length <= 1) {
-        currentStreak += 1
-        longestStreak = Math.max(longestStreak, currentStreak)
-      } else currentStreak = 0
-
-      const chosen = legalCards[Math.floor(rng() * legalCards.length)] ?? hands[0][Math.floor(rng() * hands[0].length)]
-      hands[0] = hands[0].filter((card) => card.id !== chosen?.id)
-      while (hands[0].length < 4) {
-        if (cursor >= fullDeck.length) cursor = 0
-        const candidate = fullDeck[cursor++]
-        if (candidate && !hands.flat().some((card) => card.id === candidate.id)) hands[0].push(candidate)
+        const selectedId = strategyPaths[Math.floor(rng() * Math.max(1, strategyPaths.length))]?.id.replace('strategy:', '')
+        const playerHand = game.cognitions[0].hand
+        const removed = selectedId
+          ? playerHand.find((card) => card.id === selectedId)
+          : playerHand[Math.floor(rng() * playerHand.length)]
+        hands = game.cognitions.map((cognition) => [...cognition.hand])
+        hands[0] = hands[0].filter((card) => card.id !== removed?.id)
+        while (hands[0].length < 4) {
+          if (cursor >= fullDeck.length) cursor = 0
+          const candidate = fullDeck[cursor++]
+          if (candidate && !hands.flat().some((card) => card.id === candidate.id)) hands[0].push(candidate)
+        }
+        game = {
+          ...game,
+          cognitions: game.cognitions.map((cognition, index) => ({ ...cognition, hand: hands[index], selected: null })),
+          round: game.round + 1,
+        }
       }
+      increment(narrowStreaks, bucket(longestStreak))
     }
-    increment(narrowStreaks, bucket(longestStreak))
+
+    const percent = (count) => `${((count / trials) * 100).toFixed(1)}%`
+    const normalize = (distribution) => Object.fromEntries(['0', '1', '2', '3', '4+'].map((key) => [key, percent(distribution[key] ?? 0)]))
+    const coverage = Object.entries(needLegalCounts)
+      .map(([need, value]) => ({ need, rate: value.seen ? value.playable / value.seen : 0 }))
+      .sort((left, right) => left.rate - right.rate)
+
+    return {
+      trials,
+      roundsPerPersistentHandTest: rounds,
+      legalOrdinaryStrategies: normalize(legalDistribution),
+      knownRoutesAfterMagnifierIsSpent: normalize(knownSpentDistribution),
+      knownRoutesWhileMagnifierIsReady: normalize(visibleReadyDistribution),
+      hiddenOrPermissionBasedPossibilities: normalize(uncertainDistribution),
+      specialActionCardsInHand: normalize(specialCardDistribution),
+      actualSpecialActionRoutes: normalize(specialRouteDistribution),
+      directedTradeRoutes: normalize(tradeRouteDistribution),
+      longestConsecutiveRoundsWithAtMostOneLegalOrdinaryStrategy: normalize(narrowStreaks),
+      lowestNeedCoverage: coverage.slice(0, 8).map(({ need, rate }) => ({ need, playableHandRate: `${(rate * 100).toFixed(1)}%` })),
+    }
   }
 
-  const percent = (count) => `${((count / trials) * 100).toFixed(1)}%`
-  const normalize = (distribution) => Object.fromEntries(['0', '1', '2', '3', '4+'].map((key) => [key, percent(distribution[key] ?? 0)]))
-  const coverage = Object.entries(needLegalCounts)
-    .map(([need, value]) => ({ need, rate: value.seen ? value.playable / value.seen : 0 }))
-    .sort((left, right) => left.rate - right.rate)
+  const trials = Number(process.env.TRIALS ?? 25000)
+  const rounds = Number(process.env.ROUNDS ?? 6)
+  const seed = Number(process.env.SEED ?? 20260803)
 
-  return {
-    trials,
-    roundsPerPersistentHandTest: rounds,
-    legalOrdinaryStrategies: normalize(legalDistribution),
-    specialActionCardsInHand: normalize(specialCardDistribution),
-    targetSpecificSpecialActionPaths: normalize(specialPathDistribution),
-    visiblePathsAfterMagnifierIsSpent: normalize(pathWithoutMagnifierDistribution),
-    visiblePathsWhileMagnifierIsReady: normalize(pathWithMagnifierDistribution),
-    longestConsecutiveRoundsWithAtMostOneLegalOrdinaryStrategy: normalize(narrowStreaks),
-    lowestNeedCoverage: coverage.slice(0, 8).map(({ need, rate }) => ({ need, playableHandRate: `${(rate * 100).toFixed(1)}%` })),
-  }
+  console.log(JSON.stringify({
+    assumptions: {
+      trials,
+      seed,
+      notes: [
+        'The app and simulator use the same canonical planning-route evaluator.',
+        'A route is a qualitatively distinct action family; target and pairing counts are retained as configurations rather than inflating the top-level route count.',
+        'Private-Need matches and NPC permission are shown to the player as uncertain possibilities, while the omniscient diagnostic may verify whether those routes actually exist.',
+        'The Magnifier contributes up to four routes; its card subsets and Need targets are configurations within those routes.',
+        'The proposed Brainstorm Alternatives rule is not included.',
+      ],
+    },
+    ordinaryStrategiesOnly: simulate({ trials, rounds, seed, includeSpecials: false }),
+    completeRulebookDeck: simulate({ trials, rounds, seed: seed + 1, includeSpecials: true }),
+  }, null, 2))
+} finally {
+  await server.close()
 }
-
-const trials = Number(process.env.TRIALS ?? 25000)
-const rounds = Number(process.env.ROUNDS ?? 6)
-const seed = Number(process.env.SEED ?? 20260803)
-
-console.log(JSON.stringify({
-  assumptions: {
-    trials,
-    seed,
-    notes: [
-      'This is a choice-floor diagnostic, not a full score simulator.',
-      'Each Cognition is dealt one Private and two Public Needs before hands are evaluated.',
-      'Public Needs remain fixed during the persistent-hand streak test so weak-card persistence is visible.',
-      'Directed trades count distinct offered cards that tend one of the player’s Public Needs and have at least one legal payment for the NPC.',
-      'Special Action paths count their actual Public targets, Private-matching pairings, Event pairings, or Deep Breath effect targets without revealing any Private match in the app.',
-      'The four Magnifier categories are reported separately so they do not conceal the choice floor after the token is spent.',
-      'The proposed Brainstorm Alternatives rule is not included.',
-    ],
-  },
-  ordinaryStrategiesOnly: simulate({ trials, rounds, seed, includeSpecials: false }),
-  completeRulebookDeck: simulate({ trials, rounds, seed: seed + 1, includeSpecials: true }),
-}, null, 2))

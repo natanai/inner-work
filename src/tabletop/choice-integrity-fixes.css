@@ -1,0 +1,113 @@
+/* Final structural overrides for Special Action cards, inspectors, and planning feedback. */
+
+.special-action-face > span {
+  font-size: clamp(.38rem, 5cqw, .72rem);
+}
+
+.special-action-face > b {
+  font-size: clamp(1.45rem, 21cqw, 4.8rem);
+}
+
+.special-action-face > strong {
+  font-size: clamp(.62rem, 9.2cqw, 1.8rem);
+  overflow-wrap: anywhere;
+}
+
+.special-action-face > p {
+  font-size: clamp(.32rem, 4.2cqw, .72rem);
+}
+
+.special-action-face > small {
+  font-size: clamp(.34rem, 4cqw, .7rem);
+}
+
+.special-action-committed {
+  inset: auto 5% 4% auto;
+  max-width: 90%;
+  white-space: nowrap;
+}
+
+.deal-player {
+  padding-bottom: 72px;
+}
+
+.take-seat {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.card-dialog .desktop-inspector-special-action {
+  position: static;
+  width: auto;
+  height: auto;
+  min-height: 46px;
+  margin: 12px auto 0;
+  padding: 11px 20px;
+  border-radius: 999px;
+}
+
+.desktop-card-inspector .card-dialog-inner {
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+}
+
+.desktop-card-inspector .card-dialog-inner:has(.special-action-face) {
+  width: min(560px, calc(100vw - 40px));
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.desktop-card-inspector .card-dialog-inner:has(.special-action-face) .special-action-face {
+  width: min(300px, 65vh, 75vw);
+  margin: 0 auto;
+}
+
+.desktop-card-inspector .card-dialog-inner:has(.special-action-face) > p,
+.desktop-card-inspector .card-dialog-inner:has(.special-action-face) .strategy-contribution-disclosure,
+.desktop-card-inspector .card-dialog-inner:has(.special-action-face) .strategy-quick-summary {
+  width: min(100%, 500px);
+}
+
+@media (min-width: 761px) {
+  .desktop-strategy-art {
+    position: relative;
+  }
+
+  /* The card outline and Undo button already communicate selection. */
+  .desktop-player-hand .special-action-committed {
+    display: none;
+  }
+
+  .choice-path-summary.special-choice-summary {
+    display: grid;
+    gap: 8px;
+  }
+
+  .choice-path-summary.special-choice-summary .choice-certainty {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .choice-path-summary.special-choice-summary .choice-certainty span {
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.12);
+  }
+
+  .choice-path-summary.special-choice-summary .choice-certainty .uncertain {
+    border: 1px dashed rgba(255,244,214,.46);
+  }
+}
+
+@media (max-width: 760px) {
+  .deal-player {
+    padding-bottom: 0;
+  }
+
+  .desktop-card-inspector .card-dialog-inner:has(.special-action-face) {
+    width: 100%;
+  }
+}

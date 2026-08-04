@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { distinctDirectedTradePaths } from './directedTrading'
-import { canPlayCommitted, type Cognition, type GameState } from './model'
-import { isSpecialAction, type SpecialActionCard } from './specialActions'
+import { enumeratePlanningPaths, summarizePlanningPaths } from './planningPaths'
+import type { GameState } from './model'
 
 function useTradeRoomTarget(): HTMLElement | null {
   const [target, setTarget] = useState<HTMLElement | null>(null)
@@ -16,50 +15,33 @@ function useTradeRoomTarget(): HTMLElement | null {
   return target
 }
 
-function positiveEffects(card: Cognition['hand'][number], eventActive: boolean): number {
-  if (isSpecialAction(card)) return 0
-  const effects = eventActive ? [...card.effects, ...card.eventEffects] : card.effects
-  return new Set(effects.filter((effect) => effect.amount > 0).map((effect) => effect.need)).size
-}
-
-function pathsForSpecial(game: GameState, player: Cognition, card: SpecialActionCard): number {
-  const ordinary = player.hand.filter((item) => !isSpecialAction(item))
-  switch (card.id) {
-    case 'SA1': return game.cognitions.flatMap((cognition) => cognition.publicNeeds).filter((slot) => slot.gifts > 0).length
-    case 'SA2':
-    case 'SA3': return ordinary.length > 0 ? 1 : 0
-    case 'SA4':
-    case 'SA5': return 1
-    case 'SA6': return ordinary.some((strategy) => strategy.eventEffects.length > 0) ? 1 : 0
-    case 'SA7': return ordinary.reduce((total, strategy) => total + positiveEffects(strategy, game.situation.event), 0)
-  }
-}
-
-export function specialActionPathCount(game: GameState, player: Cognition): number {
-  return player.hand.filter(isSpecialAction).reduce((total, card) => total + pathsForSpecial(game, player, card), 0)
-}
-
 export function SpecialChoiceSummary({ game }: { game: GameState }) {
   const target = useTradeRoomTarget()
-  const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
-  const legal = useMemo(() => player.hand.filter((card) => !isSpecialAction(card) && canPlayCommitted(game, player, card)).length, [game, player])
-  const trades = useMemo(() => distinctDirectedTradePaths(game), [game])
-  const specials = useMemo(() => specialActionPathCount(game, player), [game, player])
-  const magnifier: number = player.magnifierUsed ? 0 : 4
-  const discard = legal === 0 ? 1 : 0
-  const total = legal + trades + specials + magnifier + discard
+  const paths = useMemo(() => enumeratePlanningPaths(game, { privacy: 'player' }), [game])
+  const summary = useMemo(() => summarizePlanningPaths(paths), [paths])
 
   if (!target || game.phase !== 'planning') return null
   return createPortal(
-    <aside className="choice-path-summary special-choice-summary" aria-label={`${total} currently available planning paths`}>
-      <div><span>Choice check</span><strong>{total} planning path{total === 1 ? '' : 's'} visible</strong></div>
+    <aside
+      className="choice-path-summary special-choice-summary"
+      aria-label={`${summary.known} known planning routes and ${summary.uncertain} uncertain possibilities`}
+    >
+      <div>
+        <span>Choice check</span>
+        <strong>{summary.known} known planning route{summary.known === 1 ? '' : 's'}</strong>
+      </div>
+      <div className="choice-certainty">
+        <span><b>{summary.known}</b> confirmed</span>
+        {summary.uncertain > 0 && <span className="uncertain"><b>{summary.uncertain}</b> hidden or permission-based</span>}
+      </div>
       <p>
-        <b>{legal}</b> playable card{legal === 1 ? '' : 's'}
-        <b>{trades}</b> directed trade{trades === 1 ? '' : 's'}
-        <b>{specials}</b> Special Action path{specials === 1 ? '' : 's'}
-        <b>{magnifier}</b> Magnifier action{magnifier === 1 ? '' : 's'}
-        {discard > 0 && <><b>1</b> required discard</>}
+        <b>{summary.strategy}</b> playable card{summary.strategy === 1 ? '' : 's'}
+        <b>{summary.trade}</b> directed trade route{summary.trade === 1 ? '' : 's'}
+        <b>{summary.special}</b> Special Action route{summary.special === 1 ? '' : 's'}
+        <b>{summary.magnifier}</b> Magnifier route{summary.magnifier === 1 ? '' : 's'}
+        {summary.discard > 0 && <><b>{summary.discard}</b> discard route</>}
       </p>
+      {summary.uncertain > 0 && <small>Private-Need matches and NPC permission remain deliberately unconfirmed until the relevant action resolves.</small>}
     </aside>,
     target,
   )
