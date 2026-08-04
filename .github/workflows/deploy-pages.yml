@@ -31,6 +31,8 @@ jobs:
         run: npm run build
       - name: Test all Special Actions
         run: npm run test:special-actions
+      - name: Test choice integrity
+        run: npm run test:choice-integrity
       - name: Analyze meaningful choices
         run: npm run analyze:choices
       - name: Configure Pages
