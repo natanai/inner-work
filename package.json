@@ -11,7 +11,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "analyze:choices": "node scripts/analyze-choice-floor.mjs",
-    "test:special-actions": "node scripts/special-actions-engine-check.mjs"
+    "test:special-actions": "node scripts/special-actions-engine-check.mjs",
+    "test:choice-integrity": "node scripts/choice-integrity-check.mjs"
   },
   "dependencies": {
     "react": "19.2.8",
