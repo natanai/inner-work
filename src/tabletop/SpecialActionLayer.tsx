@@ -7,10 +7,16 @@ import { SpecialChoiceSummary } from './SpecialChoiceSummary'
 import {
   isSpecialAction,
   specialActionById,
-  specialActionRequiresStrategy,
   specialActionSummary,
   specialActionTiming,
 } from './specialActions'
+import {
+  applyDiscussionSpecialAction,
+  cognitionUsedSpecialAction,
+  discussionActions,
+  ordinaryEffects,
+  prepareNpcDiscussionActions,
+} from './timedSpecialActions'
 
 type SpecialActionEvent = CustomEvent<{ cardId?: string }>
 
@@ -18,36 +24,69 @@ export function openSpecialAction(cardId: string): void {
   window.dispatchEvent(new CustomEvent('inner-work:configure-special', { detail: { cardId } }))
 }
 
-function positiveEffects(game: GameState, strategyId: string | null): Array<{ need: string; amount: number }> {
-  if (!strategyId) return []
-  const strategy = game.cognitions.flatMap((cognition) => cognition.hand).find((card) => card.id === strategyId && !isSpecialAction(card))
-  if (!strategy) return []
-  const eventActive = game.situation.event || game.cognitions.some((cognition) => parseCommit(cognition.selected).specialId === 'SA6')
-  const source = eventActive ? [...strategy.effects, ...strategy.eventEffects] : strategy.effects
-  const grouped = new Map<string, number>()
-  source.forEach((effect) => {
-    if (effect.amount > 0) grouped.set(effect.need, (grouped.get(effect.need) ?? 0) + effect.amount)
-  })
-  return [...grouped.entries()].map(([need, amount]) => ({ need, amount })).sort((a, b) => b.amount - a.amount)
+function usePlanningStatusTarget(): HTMLElement | null {
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    const refresh = () => setTarget(document.querySelector<HTMLElement>('.desktop-planning-tools-target, .mobile-hand-section, .trade-room'))
+    refresh()
+    const observer = new MutationObserver(refresh)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
+  return target
+}
+
+function DiscussionActionStatus({ game }: { game: GameState }) {
+  const target = usePlanningStatusTarget()
+  const active = discussionActions(game)
+  if (!target || game.phase !== 'planning' || active.length === 0) return null
+  return createPortal(
+    <aside className="discussion-actions-live" aria-label="Discussion Actions active this round">
+      <span>Already active from Discussion</span>
+      <div>{active.map((use) => <p key={`${use.cognitionId}:${use.card.id}`}><b>{use.card.title}</b><small>{use.target ?? use.summary}</small></p>)}</div>
+    </aside>,
+    target,
+  )
 }
 
 export function SpecialActionLayer({ game, onGameChange }: { game: GameState; onGameChange: (game: GameState) => void }) {
   const [cardId, setCardId] = useState<string | null>(null)
   const [target, setTarget] = useState<string | null>(null)
+  const [strategyId, setStrategyId] = useState<string | null>(null)
   const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
   const commit = parseCommit(player.selected)
   const special = cardId ? specialActionById(cardId) : null
-  const pairedStrategy = player.hand.find((card) => card.id === commit.strategyId && !isSpecialAction(card)) ?? null
-  const boostOptions = useMemo(() => positiveEffects(game, commit.strategyId), [game, commit.strategyId])
-  const requiresStrategy = special ? specialActionRequiresStrategy(special) : false
+  const timing = special ? specialActionTiming(special) : null
+  const discussion = timing === 'Discussion Phase'
+  const ordinaryStrategies = player.hand.filter((card) => !isSpecialAction(card))
+  const pairedStrategy = ordinaryStrategies.find((card) => card.id === strategyId) ?? null
+  const boostOptions = useMemo(() => pairedStrategy
+    ? ordinaryEffects(game, pairedStrategy).filter((effect) => effect.amount > 0)
+      .reduce<Array<{ need: string; amount: number }>>((items, effect) => {
+        const existing = items.find((item) => item.need === effect.need)
+        if (existing) existing.amount += effect.amount
+        else items.push({ need: effect.need, amount: effect.amount })
+        return items
+      }, [])
+      .sort((left, right) => right.amount - left.amount)
+    : [], [game, pairedStrategy])
+  const usedAnotherSpecial = cognitionUsedSpecialAction(game, player.id) && commit.specialId !== special?.id
+
+  useEffect(() => {
+    if (game.phase !== 'planning') return
+    const prepared = prepareNpcDiscussionActions(game)
+    if (prepared !== game) onGameChange(prepared)
+  }, [game, onGameChange])
 
   useEffect(() => {
     const open = (event: Event) => {
       const nextId = (event as SpecialActionEvent).detail?.cardId
       const card = player.hand.find((item) => item.id === nextId && isSpecialAction(item))
       if (!card || game.phase !== 'planning') return
+      const current = parseCommit(player.selected)
       setCardId(card.id)
-      setTarget(commit.specialId === card.id ? commit.target : null)
+      setStrategyId(current.specialId === card.id ? current.strategyId : current.strategyId)
+      setTarget(current.specialId === card.id ? current.target : null)
     }
     window.addEventListener('inner-work:configure-special', open)
     return () => window.removeEventListener('inner-work:configure-special', open)
@@ -57,17 +96,34 @@ export function SpecialActionLayer({ game, onGameChange }: { game: GameState; on
     if (game.phase !== 'planning') setCardId(null)
   }, [game.phase])
 
+  useEffect(() => {
+    if (special?.id === 'SA7' && target && !boostOptions.some((effect) => effect.need === target)) setTarget(null)
+  }, [special?.id, target, boostOptions])
+
   const close = () => {
     setCardId(null)
     setTarget(null)
+    setStrategyId(null)
   }
 
   const apply = () => {
     if (!special) return
-    if (requiresStrategy && !pairedStrategy) return
-    if (special.id === 'SA1' && !target) return
+    if (discussion) {
+      if (special.id === 'SA1' && !target) return
+      const next = applyDiscussionSpecialAction(game, player.id, special.id, target)
+      if (next !== game) onGameChange(next)
+      close()
+      return
+    }
+
+    if (!strategyId || usedAnotherSpecial) return
     if (special.id === 'SA7' && !target) return
-    const selected = encodeCommit({ strategyId: commit.strategyId, specialId: special.id, target })
+    const selected = encodeCommit({
+      strategyId,
+      specialId: special.id,
+      target: special.id === 'SA7' ? target : null,
+      playForPrivate: special.id === 'SA2',
+    })
     onGameChange({
       ...game,
       cognitions: game.cognitions.map((cognition) => cognition.id === player.id ? { ...cognition, selected } : cognition),
@@ -79,26 +135,30 @@ export function SpecialActionLayer({ game, onGameChange }: { game: GameState; on
     onGameChange({
       ...game,
       cognitions: game.cognitions.map((cognition) => cognition.id === player.id
-        ? { ...cognition, selected: encodeCommit({ strategyId: commit.strategyId, specialId: null, target: null }) }
+        ? { ...cognition, selected: encodeCommit({ strategyId: commit.strategyId, specialId: null, target: null, playForPrivate: false }) }
         : cognition),
     })
     close()
   }
 
-  const selectedAlready = Boolean(special && commit.specialId === special.id)
+  const selectedAlready = Boolean(special && !discussion && commit.specialId === special.id)
   const incomplete = Boolean(
     special
-    && ((requiresStrategy && !pairedStrategy) || (special.id === 'SA1' && !target) || (special.id === 'SA7' && !target)),
+    && (usedAnotherSpecial
+      || (discussion && special.id === 'SA1' && !target)
+      || (!discussion && !strategyId)
+      || (special.id === 'SA7' && !target)),
   )
 
   return (
     <>
       <SpecialChoiceSummary game={game} />
+      <DiscussionActionStatus game={game} />
       {special && createPortal(
         <dialog open className="special-action-dialog" onClick={close} aria-label={`Configure ${special.title}`}>
           <section onClick={(event) => event.stopPropagation()}>
             <header>
-              <div><span>Special Action · {specialActionTiming(special)}</span><h1>{special.title}</h1></div>
+              <div><span>Special Action · {timing}</span><h1>{special.title}</h1></div>
               <button onClick={close} aria-label="Close Special Action">×</button>
             </header>
             <div className="special-action-layout">
@@ -106,18 +166,17 @@ export function SpecialActionLayer({ game, onGameChange }: { game: GameState; on
               <div className="special-action-copy">
                 <p>{specialActionSummary(special)}</p>
                 <aside>
-                  <b>How this commitment works</b>
-                  <span>{requiresStrategy
-                    ? 'Choose one ordinary Strategy first. This Special Action resolves before that Strategy and changes how the Strategy is checked.'
-                    : 'This Special Action may be committed alone or alongside one ordinary Strategy. It resolves first; a paired Strategy is then checked for legality.'}</span>
+                  <b>{discussion ? 'This changes the table now' : 'This is a conditional commitment'}</b>
+                  <span>{discussion
+                    ? 'Use this card openly during Discussion. It leaves your hand immediately, and its result is available before anyone finishes choosing or trading.'
+                    : 'Choose the ordinary Strategy inside this screen. The pair remains hidden until simultaneous reveal, and the Special Action is checked before the Strategy can resolve.'}</span>
                 </aside>
 
-                {requiresStrategy && !pairedStrategy && <p className="special-action-warning">Choose an ordinary Strategy from your hand first, then return to {special.title}.</p>}
-                {requiresStrategy && pairedStrategy && <p className="special-paired-card">Paired with <strong>{pairedStrategy.title}</strong></p>}
+                {usedAnotherSpecial && <p className="special-action-warning">This Cognition has already used a Special Action this round. Each Cognition may use at most one Special Action before the hand refills.</p>}
 
-                {special.id === 'SA1' && (
+                {discussion && special.id === 'SA1' && (
                   <fieldset>
-                    <legend>Choose the unresolved Public Need to replace</legend>
+                    <legend>Choose the unresolved Public Need to replace now</legend>
                     <div className="special-target-grid">
                       {game.cognitions.flatMap((cognition) => cognition.publicNeeds.filter((slot) => slot.gifts > 0).map((slot) => {
                         const value = `${cognition.id}:${slot.card.id}`
@@ -133,7 +192,16 @@ export function SpecialActionLayer({ game, onGameChange }: { game: GameState; on
                   </fieldset>
                 )}
 
-                {special.id === 'SA7' && (
+                {!discussion && (
+                  <fieldset>
+                    <legend>{special.id === 'SA2' ? 'Assign one Strategy specifically to your Private Need' : 'Choose the Strategy to receive the boost'}</legend>
+                    <div className="special-strategy-grid">
+                      {ordinaryStrategies.map((strategy) => <button type="button" className={strategyId === strategy.id ? 'selected' : ''} key={strategy.id} onClick={() => { setStrategyId(strategy.id); setTarget(null) }}><strong>{strategy.title}</strong><small>{special.id === 'SA2' ? 'Private match checked only at reveal' : 'Choose one positive effect next'}</small></button>)}
+                    </div>
+                  </fieldset>
+                )}
+
+                {special.id === 'SA7' && pairedStrategy && (
                   <fieldset>
                     <legend>Choose the effect to boost by +3</legend>
                     <div className="special-boost-grid">
@@ -142,15 +210,16 @@ export function SpecialActionLayer({ game, onGameChange }: { game: GameState; on
                   </fieldset>
                 )}
 
-                {(special.id === 'SA2' || special.id === 'SA3') && <p className="special-action-privacy">The app checks hidden Private Needs only during resolution. This screen never reveals or confirms which Strategies match them.</p>}
-                {(special.id === 'SA4' || special.id === 'SA5') && <p className="special-action-timing">The new Bonus Need{special.id === 'SA4' ? 's are' : ' is'} placed before ordinary Strategies resolve, so matching Strategies may use them immediately.</p>}
-                {special.id === 'SA6' && <p className="special-action-timing">Event effects activate on every ordinary Strategy played this round, even when the current Situation is not normally an Event.</p>}
+                {special.id === 'SA2' && <p className="special-action-privacy">This screen deliberately does not confirm whether the selected Strategy tends your face-down Private Need. At reveal, a mismatch discards Deep Introspection and the Strategy, applies none of the Strategy’s effects, and leaves the unmet Private Need in play.</p>}
+                {special.id === 'SA3' && <p className="special-action-timing">Once used, every Cognition gains a separate “Assign to Private Need” option for ordinary Strategies during this Discussion.</p>}
+                {(special.id === 'SA4' || special.id === 'SA5') && <p className="special-action-timing">The new Bonus Need{special.id === 'SA4' ? 's appear' : ' appears'} immediately on the table and may qualify Strategies in this same round.</p>}
+                {special.id === 'SA6' && <p className="special-action-timing">Event effects become visible in Strategy previews, legality, and trading as soon as this card is used.</p>}
               </div>
             </div>
             <footer>
-              {selectedAlready && <button className="quiet" onClick={remove}>Remove Special Action</button>}
+              {selectedAlready && <button className="quiet" onClick={remove}>Remove Start-of-Play Action</button>}
               <button className="primary" disabled={incomplete} onClick={apply}>
-                {selectedAlready ? 'Update commitment' : 'Commit this Special Action'}
+                {discussion ? 'Use now during Discussion' : selectedAlready ? 'Update hidden commitment' : 'Commit this pair'}
               </button>
             </footer>
           </section>
