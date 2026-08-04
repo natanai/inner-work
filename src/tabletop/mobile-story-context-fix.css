@@ -1,0 +1,54 @@
+@media (max-width: 760px) {
+  .mobile-story-context-line {
+    display: block;
+    margin: 0 0 18px;
+    padding: 14px 16px 16px;
+    border: 0;
+    border-left: 4px solid #b05c3e;
+    border-radius: 0 16px 16px 0;
+    background: rgba(255, 252, 240, .82);
+    box-shadow: 0 10px 24px rgba(78, 39, 29, .08);
+  }
+
+  .mobile-story-context-line::before {
+    content: 'Shared action';
+    display: block;
+    margin-bottom: 7px;
+    color: #a9583d;
+    font-size: .64rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .mobile-story-context-line > span:first-child {
+    display: none;
+  }
+
+  .mobile-story-context-line > strong:nth-child(2),
+  .mobile-story-context-line > span:nth-child(3) {
+    display: inline;
+    color: #765348;
+    font-size: .91rem;
+    font-weight: 650;
+    line-height: 1.45;
+  }
+
+  .mobile-story-context-line > strong:nth-child(2)::after {
+    content: ', ';
+  }
+
+  .mobile-story-context-line > strong:last-child {
+    display: block;
+    margin-top: 5px;
+    color: #4e2c24;
+    font-family: Georgia, serif;
+    font-size: clamp(1.28rem, 6.2vw, 1.55rem);
+    font-weight: 700;
+    line-height: 1.16;
+  }
+
+  .mobile-story-context-line > strong:last-child::after {
+    content: '.';
+  }
+}
