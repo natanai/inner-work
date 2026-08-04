@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CardBack, CardFace, GiftIcon } from './Cards'
-import { generateDirectedTradeOptions, distinctDirectedTradePaths, type DirectedTradeOption } from './directedTrading'
+import { generateDirectedTradeOptions, type DirectedTradeOption } from './directedTrading'
 import {
   beginPrivateReviewWithMagnifier,
   endPrivateReview,
@@ -9,11 +9,10 @@ import {
   replaceStrategiesWithMagnifier,
   requestNpcPublicNeedReplacement,
 } from './magnifierActions'
-import { canPlay, type CognitionId, type GameState } from './model'
+import type { CognitionId, GameState } from './model'
 import { applyTrade } from './trading'
 
 type MagnifierMode = 'menu' | 'refresh' | 'own-need' | 'other-need' | 'review-confirm' | 'reviewing'
-
 type NeedChoice = { cognitionId: CognitionId; cardId: string }
 
 function useTradeRoomTarget(): HTMLElement | null {
@@ -84,21 +83,6 @@ function DirectedTradePanel({ game, onGameChange }: { game: GameState; onGameCha
         </>
       )}
     </section>
-  )
-}
-
-function ChoicePathSummary({ game }: { game: GameState }) {
-  const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
-  const bonuses = game.bonusNeeds.filter((bonus) => bonus.gifts > 0 && bonus.availableRound <= game.round)
-  const legal = player.hand.filter((card) => canPlay(player, card, bonuses)).length
-  const trades = distinctDirectedTradePaths(game)
-  const magnifier: number = player.magnifierUsed ? 0 : 4
-  const total = legal + trades + magnifier
-  return (
-    <aside className="choice-path-summary" aria-label={`${total} currently available planning paths`}>
-      <div><span>Choice check</span><strong>{total} planning path{total === 1 ? '' : 's'} visible</strong></div>
-      <p><b>{legal}</b> playable card{legal === 1 ? '' : 's'} <b>{trades}</b> directed trade{trades === 1 ? '' : 's'} <b>{magnifier}</b> Magnifier action{magnifier === 1 ? '' : 's'}</p>
-    </aside>
   )
 }
 
@@ -182,7 +166,6 @@ export function ChoiceSupportLayer({ game, onGameChange, children }: { game: Gam
   }
 
   const planningInsertion = tradeTarget ? createPortal(<>
-    <ChoicePathSummary game={game} />
     <DirectedTradePanel game={game} onGameChange={onGameChange} />
     {!player.magnifierUsed && <button className="magnifier-choice-launch" onClick={openMagnifier}><span>Magnifying glass</span><strong>Choose one of four once-per-Situation actions</strong></button>}
   </>, tradeTarget) : null
