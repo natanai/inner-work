@@ -1,6 +1,7 @@
 import { specialActions, strategies, type StrategyCard } from '../data/cards'
 
 export type SpecialActionId = 'SA1' | 'SA2' | 'SA3' | 'SA4' | 'SA5' | 'SA6' | 'SA7'
+export type SpecialActionTiming = 'Discussion Phase' | 'Start of Play Phase'
 
 export type SpecialActionCard = StrategyCard & {
   id: SpecialActionId
@@ -17,18 +18,19 @@ export const specialStrategyCards: SpecialActionCard[] = specialActions.map((car
 }))
 
 /**
- * Production rollout gate.
+ * Production Special Action deck.
  *
- * This branch validates Effective Communication in isolation. No other Special
- * Action may enter a hand through this build.
+ * All seven source cards are enabled only alongside the executable regression
+ * suite. Keeping this as an explicit list prevents a malformed data row or a
+ * future draft card from entering normal deals accidentally.
  */
-export const enabledSpecialActionIds: readonly SpecialActionId[] = ['SA5']
+export const enabledSpecialActionIds: readonly SpecialActionId[] = ['SA1', 'SA2', 'SA3', 'SA4', 'SA5', 'SA6', 'SA7']
 export const enabledSpecialStrategyCards = specialStrategyCards.filter((card) => enabledSpecialActionIds.includes(card.id))
 
 /** Cards that may actually be shuffled into a new game in this build. */
 export const allStrategyCards: StrategyCard[] = [...strategies, ...enabledSpecialStrategyCards]
 
-/** Full catalog retained for rendering archived games and isolated tests. */
+/** Full catalog retained for rendering saved or archived games. */
 export const completeStrategyCatalog: StrategyCard[] = [...strategies, ...specialStrategyCards]
 
 export function isSpecialAction(card: StrategyCard | null | undefined): card is SpecialActionCard {
@@ -45,15 +47,23 @@ export function strategyCardById(id: string | null | undefined): StrategyCard | 
   return completeStrategyCatalog.find((card) => card.id === id) ?? null
 }
 
+export function specialActionTiming(card: SpecialActionCard): SpecialActionTiming {
+  return card.id === 'SA2' || card.id === 'SA7' ? 'Start of Play Phase' : 'Discussion Phase'
+}
+
+export function specialActionRequiresStrategy(card: SpecialActionCard): boolean {
+  return card.id === 'SA2' || card.id === 'SA7'
+}
+
 export function specialActionSummary(card: SpecialActionCard): string {
   switch (card.id) {
     case 'SA1': return 'Replace any one Public Need with a newly drawn Public Need.'
-    case 'SA2': return 'Your paired Strategy may qualify through your own Private Need.'
-    case 'SA3': return 'Every Cognition may qualify its paired Strategy through its own Private Need this round.'
-    case 'SA4': return 'Draw two Need cards and place them as active Bonus Needs before Strategies resolve.'
-    case 'SA5': return 'Place an active Bonus Need for Understanding before Strategies resolve.'
-    case 'SA6': return 'Activate every paired Strategy’s Event effects for this round.'
-    case 'SA7': return 'Add +3 to one positive effect on your paired Strategy.'
+    case 'SA2': return 'Your ordinary Strategy may qualify through your own Private Need.'
+    case 'SA3': return 'Every Cognition may qualify an ordinary Strategy through its own Private Need this round.'
+    case 'SA4': return 'Draw two Need cards and place them as active Bonus Needs before ordinary Strategies resolve.'
+    case 'SA5': return 'Place an active Bonus Need for Understanding before ordinary Strategies resolve.'
+    case 'SA6': return 'Activate the Event effects on every ordinary Strategy played this round.'
+    case 'SA7': return 'Add +3 to one positive effect on your ordinary Strategy.'
   }
 }
 

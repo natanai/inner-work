@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { CardFace, GiftIcon } from './Cards'
-import { parseCommit, setOrdinaryCommit } from './commitSelection'
+import { cardIsCommitted, parseCommit, setOrdinaryCommit } from './commitSelection'
 import { DesktopPlayerHand, DesktopSituationTableau, type DesktopDetail, type DesktopInspection } from './DesktopTableau'
 import { DesktopStoryTable } from './DesktopStoryTable'
 import type { GameState } from './model'
+import { openSpecialAction } from './SpecialActionLayer'
+import { isSpecialAction, specialActionById, specialActionRequiresStrategy } from './specialActions'
 import { StrategyContributionDetails, StrategyQuickSummary } from './StrategyContributionDetails'
 
 function DetailDialog({ game, detail, onClose }: { game: GameState; detail: DesktopDetail; onClose: () => void }) {
@@ -22,9 +24,15 @@ export function PlayScreen({ game, onChange, onNextSituation, onEnd }: { game: G
   const [detail, setDetail] = useState<DesktopDetail | null>(null)
   const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
   const commit = parseCommit(player.selected)
+  const committedSpecial = specialActionById(commit.specialId)
+  const commitmentReady = Boolean(player.selected && (!committedSpecial || !specialActionRequiresStrategy(committedSpecial) || commit.strategyId))
+  const personalScore = player.privateScore + player.bonusScore
   const inspectedResolution = inspected?.kind === 'strategy' ? game.resolution.find((line) => line.strategy.id === inspected.id || line.specialAction?.id === inspected.id) : null
   const inspectedActor = inspectedResolution ? game.cognitions.find((cognition) => cognition.id === inspectedResolution.cognitionId) ?? player : player
   const inspectedStrategy = inspected?.kind === 'strategy' ? game.cognitions.flatMap((cognition) => cognition.hand).find((card) => card.id === inspected.id) ?? inspectedResolution?.strategy ?? inspectedResolution?.specialAction ?? null : null
+  const inspectedPlayerSpecial = inspectedStrategy && isSpecialAction(inspectedStrategy) && player.hand.some((card) => card.id === inspectedStrategy.id)
+    ? inspectedStrategy
+    : null
 
   const select = (id: string) => onChange({
     ...game,
@@ -34,11 +42,11 @@ export function PlayScreen({ game, onChange, onNextSituation, onEnd }: { game: G
       return { ...cognition, selected: setOrdinaryCommit(cognition.selected, current.strategyId === id ? null : id) }
     }),
   })
-  const reviewPrivate = () => window.dispatchEvent(new CustomEvent('inner-work:review-private'))
+  const openMagnifier = () => window.dispatchEvent(new Event('inner-work:open-magnifier'))
   const readyDescription = commit.strategyId && commit.specialId
     ? 'Your Strategy and Special Action are committed.'
     : commit.specialId ? 'Your Special Action is committed. You may also choose an ordinary Strategy.'
       : commit.strategyId ? 'Your Strategy is committed.' : 'Choose a Strategy, Special Action, trade, or prepare a discard.'
 
-  return <main className="play-page desktop-parity-page"><header className="desktop-game-header"><div><span>Inner Work · Situation {game.situationNumber}</span><strong>{game.situation.title}</strong></div><div><b><GiftIcon variation={0} />{game.sharedScore} shared</b><b>Round {game.round}</b><button onClick={onEnd}>End day</button></div></header><DesktopSituationTableau game={game} onInspect={setInspected} onDetail={setDetail} onReviewPrivate={reviewPrivate} />{game.phase === 'planning' && <DesktopPlayerHand game={game} onSelect={select} onInspect={setInspected} />}{game.phase === 'planning' && <footer className="desktop-action-bar"><div><span>Your turn</span><strong>{readyDescription}</strong></div><button className="primary" disabled={!player.selected} onClick={() => onChange(game)}>Reveal all commitments</button></footer>}{game.phase !== 'planning' && <DesktopStoryTable game={game} onContinue={() => onChange(game)} onNextSituation={onNextSituation} onInspectStrategy={(id, label) => setInspected({ kind: 'strategy', id, label })} />}{detail && <DetailDialog game={game} detail={detail} onClose={() => setDetail(null)} />}{inspected && <dialog open className="card-dialog desktop-card-inspector" onClick={() => setInspected(null)} aria-label={inspected.label}><div className={`card-dialog-inner zoom-${inspected.kind}`} onClick={(event) => event.stopPropagation()}><button className="dialog-close" onClick={() => setInspected(null)} aria-label="Close enlarged card">×</button><CardFace kind={inspected.kind} id={inspected.id} className="zoomed-card" />{inspectedStrategy && <StrategyQuickSummary game={game} cognition={inspectedActor} card={inspectedStrategy} />}{inspected.detail && <p>{inspected.detail}</p>}{inspectedStrategy && <details className="strategy-contribution-disclosure"><summary>More contribution details</summary><StrategyContributionDetails game={game} cognition={inspectedActor} card={inspectedStrategy} compact /></details>}</div></dialog>}</main>
+  return <main className="play-page desktop-parity-page"><header className="desktop-game-header"><div><span>Inner Work · Situation {game.situationNumber}</span><strong>{game.situation.title}</strong></div><div><b><GiftIcon variation={0} />{game.sharedScore} shared</b><b>α {personalScore} yours</b><button className={player.magnifierUsed ? 'desktop-magnifier-used' : ''} disabled={game.phase !== 'planning' || player.magnifierUsed} onClick={openMagnifier}>⌕ {player.magnifierUsed ? 'Magnifier used' : 'Magnifier ready'}</button><b>Round {game.round}</b><button onClick={onEnd}>End day</button></div></header><DesktopSituationTableau game={game} onInspect={setInspected} onDetail={setDetail} onReviewPrivate={openMagnifier} />{game.phase === 'planning' && <DesktopPlayerHand game={game} onSelect={select} onInspect={setInspected} />}{game.phase === 'planning' && <footer className="desktop-action-bar"><div><span>Your turn</span><strong>{readyDescription}</strong></div><button className="primary" disabled={!commitmentReady} onClick={() => onChange(game)}>Reveal all commitments</button></footer>}{game.phase !== 'planning' && <DesktopStoryTable game={game} onContinue={() => onChange(game)} onNextSituation={onNextSituation} onInspectStrategy={(id, label) => setInspected({ kind: 'strategy', id, label })} />}{detail && <DetailDialog game={game} detail={detail} onClose={() => setDetail(null)} />}{inspected && <dialog open className="card-dialog desktop-card-inspector" onClick={() => setInspected(null)} aria-label={inspected.label}><div className={`card-dialog-inner zoom-${inspected.kind}`} onClick={(event) => event.stopPropagation()}><button className="dialog-close" onClick={() => setInspected(null)} aria-label="Close enlarged card">×</button><CardFace kind={inspected.kind} id={inspected.id} className="zoomed-card" />{inspectedStrategy && <StrategyQuickSummary game={game} cognition={inspectedActor} card={inspectedStrategy} />}{inspected.detail && <p>{inspected.detail}</p>}{inspectedStrategy && <details className="strategy-contribution-disclosure"><summary>More contribution details</summary><StrategyContributionDetails game={game} cognition={inspectedActor} card={inspectedStrategy} compact /></details>}{inspectedPlayerSpecial && game.phase === 'planning' && <button className="primary desktop-inspector-special-action" onClick={() => { setInspected(null); openSpecialAction(inspectedPlayerSpecial.id) }}>{cardIsCommitted(player, inspectedPlayerSpecial.id) ? 'Review Special Action' : 'Configure Special Action'}</button>}</div></dialog>}</main>
 }

@@ -1,72 +1,61 @@
-# Special Action staged rollout
+# Special Action validation record
 
-The complete Special Action engine is retained in the repository, but cards enter production only after isolated validation.
+The seven source Special Actions are now enabled together only because the production workflow runs an executable regression scenario for every card.
 
-This is an intentional safety gate after the initial all-at-once implementation touched too many interacting systems at once.
-
-## Active rollout list
-
-`src/tabletop/specialActions.ts` contains the explicit production list:
+The earlier staged gate was useful after the first broad implementation touched many systems at once. It is retained in history, but the active production list is now complete:
 
 ```ts
-export const enabledSpecialActionIds: readonly SpecialActionId[] = ['SA5']
+export const enabledSpecialActionIds: readonly SpecialActionId[] = [
+  'SA1', 'SA2', 'SA3', 'SA4', 'SA5', 'SA6', 'SA7',
+]
 ```
 
-**Currently active:**
+Runtime flags remain deliberately unsupported, so deployment configuration cannot silently activate an unreviewed draft card.
 
-- **SA5 — Effective Communication**
+## Required checks
 
-**Still disabled:** SA1, SA2, SA3, SA4, SA6, and SA7.
-
-Runtime flags are deliberately not supported, so deployment configuration cannot activate a card accidentally. A later card-specific branch adds only that card after preserving every already-validated ID.
-
-## Required test sequence
-
-Each Special Action receives its own pull request and must pass:
+Every change to Special Action behavior must pass:
 
 1. TypeScript and Vite production build.
-2. Regression check for every previously enabled card.
+2. Complete seven-card engine regression suite.
 3. Deal/refill check: hands remain four total cards.
-4. Selection check on mobile docked, mobile undocked, and desktop hands.
-5. Resolution check for the card’s exact written rule.
-6. Story Table check: the Special Action is shown before the paired Strategy.
+4. Selection and configuration checks on mobile and desktop.
+5. Resolution check for the card’s written effect.
+6. Story Table check: the Special Action appears before a paired ordinary Strategy.
 7. Hidden-information check when Private Needs are involved.
-8. Next-round and next-Situation state check.
+8. Next-round and next-Situation state checks.
+9. Meaningful-choice analysis.
 
-The card-specific branch must contain only the minimum engine, interface, test, and documentation changes needed for that one card.
+Run the executable suite with:
+
+```bash
+npm run test:special-actions
+```
 
 ## Validation record
 
-### SA5 — Effective Communication
+| Card | Verified behavior |
+|---|---|
+| **SA1 — Spontaneous Help** | Replaces one selected unresolved Public Need with a unique newly drawn Need using the current Situation setup. |
+| **SA2 — Deep Introspection** | Requires a paired ordinary Strategy and permits that Strategy to qualify through the acting Cognition’s own hidden Private Need. |
+| **SA3 — Group Therapy Session** | Permits every Cognition’s ordinary Strategy to qualify through that Cognition’s own hidden Private Need for the round. |
+| **SA4 — Emergency Situation** | Draws two active one-gift Bonus Needs before legality and scoring are checked. |
+| **SA5 — Effective Communication** | Introduces active Understanding before legality and scoring are checked. |
+| **SA6 — Unexpected Turn of Events** | Activates Event effects on all ordinary Strategies played during a non-Event Situation. |
+| **SA7 — Deep Breath** | Requires a paired ordinary Strategy and adds exactly +3 to one selected positive effect. |
 
-Status: **validated for rollout**
+The suite also verifies:
 
-The executable `npm run test:sa5` scenario verifies that:
-
-- SA5 introduces an active one-gift Understanding Bonus Need before legality is checked;
-- an otherwise-illegal Understanding Strategy becomes legal through that Bonus Need;
-- the strongest matching Cognition receives the Bonus gift as an individual point;
-- the fully tended Bonus Need leaves play;
-- SA5 and its paired Strategy both leave the hand; and
-- the hand refills to four.
-
-The production build and meaningful-choice analysis also pass with only SA5 enabled.
-
-## Remaining rollout order
-
-The order moves from isolated board effects to hidden-information and global-resolution effects:
-
-1. **SA4 — Emergency Situation**: introduce two Bonus Needs.
-2. **SA1 — Spontaneous Help**: replace one Public Need.
-3. **SA7 — Deep Breath**: boost one selected effect by +3.
-4. **SA6 — Unexpected Turn of Events**: activate Event effects globally.
-5. **SA2 — Deep Introspection**: qualify through the acting Cognition’s Private Need.
-6. **SA3 — Group Therapy Session**: qualify every Cognition through its Private Need.
-
-Cards later in the order depend on more engine surfaces and therefore should not be combined with earlier work.
+- the active deck contains 61 unique cards;
+- source timing metadata remains attached to every Special Action;
+- removing an ordinary Strategy also removes SA2 or SA7 when that pairing becomes invalid;
+- standalone-capable Special Actions remain committed when an optional ordinary Strategy is removed;
+- used Special Actions and paired Strategies leave the hand; and
+- each hand refills to four total cards.
 
 ## Stable references
 
-- The broad experimental implementation is preserved on `archive/special-action-parity-big-bang`.
+- The broad experimental implementation remains preserved on `archive/special-action-parity-big-bang`.
 - Pull request #35 records the original integrated design and build history.
-- The proposed `Brainstorm Alternatives` solo rule remains excluded.
+- Pull request #37 records the isolated SA5 rollout.
+- The proposed `Brainstorm Alternatives` solo rule remains excluded until complete-rule play data shows it is needed.
