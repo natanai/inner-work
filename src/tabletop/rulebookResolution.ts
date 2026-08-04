@@ -16,7 +16,9 @@ function activeBeforeResolution(game: GameState): BonusNeed[] {
 function inferImmediateBonus(game: GameState, resolved: GameState, award: BonusAward): BonusNeed | null {
   const specialId = award.bonusId.includes('-SA4-') ? 'SA4' : award.bonusId.endsWith('-SA5') ? 'SA5' : null
   if (!specialId) return null
-  const actor = resolved.roundLedger?.specialActions.find((use) => use.card.id === specialId)
+  const cognitionId = award.bonusId.split('-')[2] as CognitionId | undefined
+  const actor = resolved.roundLedger?.specialActions.find((use) => use.card.id === specialId && use.cognitionId === cognitionId)
+    ?? resolved.roundLedger?.specialActions.find((use) => use.card.id === specialId)
   if (!actor) return null
   return {
     id: award.bonusId,
@@ -90,11 +92,14 @@ export function resolveRound(game: GameState): GameState {
   const opportunities = bonusOpportunities(game, resolved)
   const correctedAwards: BonusAward[] = []
   const completedBonusIds = new Set<string>()
+  const cognitionOrder = new Map(game.cognitions.map((cognition, index) => [cognition.id, index]))
 
   for (const bonus of opportunities) {
     const contenders = resolved.resolution.filter((line) => positiveStrength(game, resolved, line, bonus.need) > 0)
     if (contenders.length === 0) continue
-    const unique = contenders.filter((line, index, all) => all.findIndex((candidate) => candidate.cognitionId === line.cognitionId) === index)
+    const unique = contenders
+      .filter((line, index, all) => all.findIndex((candidate) => candidate.cognitionId === line.cognitionId) === index)
+      .sort((left, right) => (cognitionOrder.get(left.cognitionId) ?? 99) - (cognitionOrder.get(right.cognitionId) ?? 99))
     correctedAwards.push({
       bonusId: bonus.id,
       need: bonus.need,
