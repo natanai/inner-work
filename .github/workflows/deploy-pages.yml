@@ -37,6 +37,8 @@ jobs:
         run: npm run test:choice-integrity
       - name: Test Cognition names
         run: npm run test:cognition-names
+      - name: Test mobile UX cleanup
+        run: npm run test:mobile-ux
       - name: Analyze meaningful choices
         run: npm run analyze:choices
       - name: Configure Pages
