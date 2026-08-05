@@ -1,5 +1,5 @@
 import type { StrategyCard } from '../data/cards'
-import { cognitionSymbol } from './cognitionIdentity'
+import { CognitionSeatBadge } from './CognitionSeatBadge'
 import type { Cognition, GameState } from './model'
 import { isSpecialAction, specialActionSummary, specialActionTiming } from './specialActions'
 import { analyzeStrategy, type BonusMatch, type PublicMatch } from './trading'
@@ -9,7 +9,20 @@ function giftLabel(count: number): string {
 }
 
 function CognitionToken({ id }: { id: PublicMatch['cognitionId'] }) {
-  return <b className={`strategy-cognition-token owner-${id}`} aria-label={`Cognition ${cognitionSymbol(id)}`}>{cognitionSymbol(id)}</b>
+  return <CognitionSeatBadge cognition={id} size="small" />
+}
+
+function bonusOrigin(game: GameState, bonus: BonusMatch): string {
+  const immediateDiscussionAction = bonus.sourceStrategyId === 'SA4' || bonus.sourceStrategyId === 'SA5'
+  const introducedRound = immediateDiscussionAction
+    ? bonus.availableRound
+    : Math.max(1, bonus.availableRound - 1)
+  const when = introducedRound === game.round
+    ? 'this round'
+    : introducedRound === game.round - 1
+      ? 'last round'
+      : `in Round ${introducedRound}`
+  return `Introduced ${when} by “${bonus.sourceStrategyTitle}” · ${bonus.sourceCognitionName}`
 }
 
 export function StrategyQuickSummary({ game, cognition, card }: {
@@ -80,11 +93,15 @@ function PublicDetail({ match, qualification }: { match: PublicMatch; qualificat
   )
 }
 
-function BonusDetail({ bonus }: { bonus: BonusMatch }) {
+function BonusDetail({ game, bonus }: { game: GameState; bonus: BonusMatch }) {
   return (
     <li className="strategy-detail-row bonus">
       <b className="strategy-bonus-token" aria-hidden="true">✦</b>
-      <span><strong>{bonus.need}</strong><small>Active Bonus · makes this card playable</small></span>
+      <span>
+        <strong>{bonus.need}</strong>
+        <small>Active Bonus · makes this card playable</small>
+        <small className="strategy-bonus-origin">{bonusOrigin(game, bonus)}</small>
+      </span>
       <b>+{bonus.strength}</b>
       <em>up to {bonus.contribution}/{bonus.gifts} gifts</em>
       {bonus.eventStrength > 0 && <i>Event +{bonus.eventStrength}</i>}
@@ -124,7 +141,7 @@ export function StrategyContributionDetails({ game, cognition, card, compact = f
   return (
     <section className={`strategy-contribution-details ${compact ? 'compact' : ''} ${analysis.playable ? 'playable' : 'discard'}`}>
       {!analysis.playable && <p className="strategy-contribution-empty">No visible match with your unresolved Public Needs or an active Bonus Need. A private-targeted commitment, when available, is checked only at reveal.</p>}
-      {hasQualification && <div className="strategy-detail-group"><h3>Makes it playable</h3><ul>{analysis.ownPublic.map((match) => <PublicDetail key={`${match.cognitionId}:${match.need}`} match={match} qualification />)}{analysis.bonusNeeds.map((bonus) => <BonusDetail key={bonus.id} bonus={bonus} />)}</ul></div>}
+      {hasQualification && <div className="strategy-detail-group"><h3>Makes it playable</h3><ul>{analysis.ownPublic.map((match) => <PublicDetail key={`${match.cognitionId}:${match.need}`} match={match} qualification />)}{analysis.bonusNeeds.map((bonus) => <BonusDetail key={bonus.id} game={game} bonus={bonus} />)}</ul></div>}
       {hasOtherPublic && <div className="strategy-detail-group"><h3>{analysis.playable ? 'Also tends' : 'Could help after a trade'}</h3><ul>{analysis.otherPublic.map((match) => <PublicDetail key={`${match.cognitionId}:${match.need}`} match={match} qualification={false} />)}</ul></div>}
       {analysis.createdBonuses.length > 0 && <div className="strategy-detail-group"><h3>Introduces next round</h3><ul>{analysis.createdBonuses.map((bonus) => <li className="strategy-detail-row created" key={bonus.need}><b className="strategy-bonus-token" aria-hidden="true">＋</b><span><strong>{bonus.need}</strong><small>New Bonus Need</small></span><b>+{bonus.gifts}</b><em>{bonus.eventGifts > 0 ? `Event effect +${bonus.eventGifts}` : 'next round'}</em></li>)}</ul></div>}
     </section>
