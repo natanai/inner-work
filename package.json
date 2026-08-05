@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "analyze:choices": "node scripts/analyze-choice-floor.mjs",
     "test:special-actions": "node scripts/special-actions-engine-check.mjs",
+    "test:special-timing": "node scripts/special-action-timing-check.mjs",
     "test:choice-integrity": "node scripts/choice-integrity-check.mjs"
   },
   "dependencies": {
