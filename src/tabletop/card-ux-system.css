@@ -27,6 +27,32 @@
   vertical-align: middle;
 }
 
+/* Screens not yet migrated to the component still inherit its visual grammar. */
+.cognition-identity-token,
+.strategy-cognition-token,
+.desktop-owner-token,
+.situation-need-owner,
+.true-need-owner-badge,
+.responsibility-card > header > b,
+.desktop-cognition-column > header > b,
+.mobile-cognition-list article > b,
+.shared-person-player > b,
+.mobile-bank-personal > b {
+  display: inline-grid !important;
+  place-items: center !important;
+  box-sizing: border-box;
+  padding: 0 !important;
+  border-radius: 999px;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-style: normal !important;
+  font-weight: 850 !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  text-indent: 0 !important;
+}
+
 .cognition-seat-badge.size-small { width: 24px; height: 24px; font-size: .72rem !important; }
 .cognition-seat-badge.size-medium { width: 31px; height: 31px; }
 .cognition-seat-badge.size-large { width: 44px; height: 44px; font-size: 1rem !important; }
