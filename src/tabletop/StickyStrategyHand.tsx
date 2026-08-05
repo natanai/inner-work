@@ -178,9 +178,22 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
     </section>, handTarget,
   ) : null
 
+  const inlineHand = handTarget && handMode === 'undocked' ? createPortal(
+    <div className="phase-aware-inline-hand" aria-label="Your phase-aware Strategy hand">
+      {cards.map((card, index) => {
+        const special = isSpecialAction(card)
+        const selected = cardIsCommitted(player, card.id)
+        const privateSelected = !special && commit.strategyId === card.id && commit.playForPrivate
+        const legal = special || canPlayVisible(game, player, card)
+        return <button className={`${selected ? 'selected' : ''} ${privateSelected ? 'private-targeted' : ''}`} key={card.id} onClick={() => setInspectedIndex(index)} aria-label={`Inspect ${card.title}`}><CardFace kind="strategy" id={card.id} /><span><small>{special ? 'Special Action' : privateSelected ? 'Assigned to Private Need' : legal ? 'Visible legal route' : 'No visible match'}</small><strong>{card.title}</strong>{selected && <b>{special ? 'Prepared' : privateSelected ? 'Private target' : 'Chosen'}</b>}</span></button>
+      })}
+    </div>, handTarget,
+  ) : null
+
   return (
     <>
       {preference}
+      {inlineHand}
       {handMode === 'docked' && (
         <aside className="sticky-strategy-hand" aria-label="Your Strategy hand">
           <div className="sticky-hand-caption"><span>Your hand</span><b>{frontIndex + 1} of {cards.length}</b><small>Tap the front card to inspect</small></div>
