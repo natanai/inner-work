@@ -1,0 +1,110 @@
+/*
+ * A few older mobile components still print the internal α/β/γ ids directly.
+ * Keep those implementation ids invisible and present stable, readable seat
+ * numbers instead. The randomized full name remains the Cognition identity.
+ */
+:is(
+  .cognition-identity-token.owner-alpha,
+  .strategy-cognition-token.owner-alpha,
+  .owner-alpha .situation-need-owner,
+  .owner-alpha .desktop-owner-token,
+  .desktop-cognition-column.owner-alpha > header > b,
+  .true-need-owner-alpha .true-need-owner-badge,
+  .mobile-cognition-list article.owner-alpha > b,
+  .responsibility-card.owner-alpha > header > b,
+  .mobile-bank-personal > b,
+  .required-needs-grid > .situation-need-tile:nth-child(-n+2) .situation-need-owner,
+  .mobile-cognition-list > article:nth-child(1) > b
+),
+:is(
+  .cognition-identity-token.owner-beta,
+  .strategy-cognition-token.owner-beta,
+  .owner-beta .situation-need-owner,
+  .owner-beta .desktop-owner-token,
+  .desktop-cognition-column.owner-beta > header > b,
+  .true-need-owner-beta .true-need-owner-badge,
+  .mobile-cognition-list article.owner-beta > b,
+  .responsibility-card.owner-beta > header > b,
+  .required-needs-grid > .situation-need-tile:nth-child(3) .situation-need-owner,
+  .required-needs-grid > .situation-need-tile:nth-child(4) .situation-need-owner,
+  .mobile-cognition-list > article:nth-child(2) > b
+),
+:is(
+  .cognition-identity-token.owner-gamma,
+  .strategy-cognition-token.owner-gamma,
+  .owner-gamma .situation-need-owner,
+  .owner-gamma .desktop-owner-token,
+  .desktop-cognition-column.owner-gamma > header > b,
+  .true-need-owner-gamma .true-need-owner-badge,
+  .mobile-cognition-list article.owner-gamma > b,
+  .responsibility-card.owner-gamma > header > b,
+  .required-needs-grid > .situation-need-tile:nth-child(5) .situation-need-owner,
+  .required-needs-grid > .situation-need-tile:nth-child(6) .situation-need-owner,
+  .mobile-cognition-list > article:nth-child(3) > b
+) {
+  font-size: 0 !important;
+}
+
+:is(
+  .cognition-identity-token.owner-alpha,
+  .strategy-cognition-token.owner-alpha,
+  .owner-alpha .situation-need-owner,
+  .owner-alpha .desktop-owner-token,
+  .desktop-cognition-column.owner-alpha > header > b,
+  .true-need-owner-alpha .true-need-owner-badge,
+  .mobile-cognition-list article.owner-alpha > b,
+  .responsibility-card.owner-alpha > header > b,
+  .mobile-bank-personal > b,
+  .required-needs-grid > .situation-need-tile:nth-child(-n+2) .situation-need-owner,
+  .mobile-cognition-list > article:nth-child(1) > b
+)::after {
+  content: '1';
+}
+
+:is(
+  .cognition-identity-token.owner-beta,
+  .strategy-cognition-token.owner-beta,
+  .owner-beta .situation-need-owner,
+  .owner-beta .desktop-owner-token,
+  .desktop-cognition-column.owner-beta > header > b,
+  .true-need-owner-beta .true-need-owner-badge,
+  .mobile-cognition-list article.owner-beta > b,
+  .responsibility-card.owner-beta > header > b,
+  .required-needs-grid > .situation-need-tile:nth-child(3) .situation-need-owner,
+  .required-needs-grid > .situation-need-tile:nth-child(4) .situation-need-owner,
+  .mobile-cognition-list > article:nth-child(2) > b
+)::after {
+  content: '2';
+}
+
+:is(
+  .cognition-identity-token.owner-gamma,
+  .strategy-cognition-token.owner-gamma,
+  .owner-gamma .situation-need-owner,
+  .owner-gamma .desktop-owner-token,
+  .desktop-cognition-column.owner-gamma > header > b,
+  .true-need-owner-gamma .true-need-owner-badge,
+  .mobile-cognition-list article.owner-gamma > b,
+  .responsibility-card.owner-gamma > header > b,
+  .required-needs-grid > .situation-need-tile:nth-child(5) .situation-need-owner,
+  .required-needs-grid > .situation-need-tile:nth-child(6) .situation-need-owner,
+  .mobile-cognition-list > article:nth-child(3) > b
+)::after {
+  content: '3';
+}
+
+:is(
+  .cognition-identity-token,
+  .strategy-cognition-token,
+  .situation-need-owner,
+  .desktop-owner-token,
+  .desktop-cognition-column > header > b,
+  .true-need-owner-badge,
+  .mobile-cognition-list article > b,
+  .responsibility-card > header > b,
+  .mobile-bank-personal > b
+)::after {
+  font-size: .82rem;
+  font-weight: 850;
+  line-height: 1;
+}
