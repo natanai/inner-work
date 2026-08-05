@@ -52,7 +52,7 @@ try {
   const filler = ['ST35', 'ST43', 'ST37', 'ST50', 'ST21', 'ST24', 'ST31', 'ST46'].map(strategy)
 
   function makeGame({
-    alphaHand,
+    alphaHand = filler.slice(0, 4),
     alphaSelected = null,
     alphaPublic = [slot(need('FN3')), slot(need('FN17'))],
     alphaPrivate = slot(need('FN26')),
