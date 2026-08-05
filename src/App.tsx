@@ -11,11 +11,13 @@ import { MobilePlayScreen } from './tabletop/MobilePlayScreen'
 import { MobileStoryTable } from './tabletop/MobileStoryTable'
 import { PlayScreen } from './tabletop/PlayScreen'
 import { PrivateNeedChoiceScreen } from './tabletop/PrivateNeedChoiceScreen'
+import { SharedPersonSetupScreen } from './tabletop/SharedPersonSetupScreen'
 import { SpecialActionLayer } from './tabletop/SpecialActionLayer'
 import { StickyStrategyHand } from './tabletop/StickyStrategyHand'
 import { TactileExperienceLayer } from './tabletop/TactileExperienceLayer'
 import { TradeDiscussionLayer } from './tabletop/TradeDiscussionLayer'
 import { assignRandomCognitionNames } from './tabletop/cognitionNames'
+import { withSharedPersonName } from './tabletop/gameParticipants'
 import { choosePrivateNeed } from './tabletop/privateNeedChoice'
 import type { GameState } from './tabletop/model'
 import {
@@ -89,7 +91,7 @@ function DayEnd({ game, onAgain, onHome }: { game: GameState; onAgain: () => voi
   return <main className="end-page"><section><span>The table is cleared</span><h1>What did the whole psyche receive?</h1><div className="end-scores"><article><b>{game.sharedScore}</b><span>shared gifts</span></article><article><b>{game.situationNumber}</b><span>situations</span></article><article><b>{balance}%</b><span>balance</span></article></div><div className="cognition-scores">{game.cognitions.map((cognition) => <p key={cognition.id}><span>{cognition.name}</span><b>{cognition.privateScore + cognition.bonusScore} individual</b></p>)}</div><div><button className="primary" onClick={onAgain}>Play another day</button><button className="quiet" onClick={onHome}>Home</button></div></section></main>
 }
 
-type Screen = 'home' | 'loading' | 'private-choice' | 'deal' | 'play' | 'end'
+type Screen = 'home' | 'shared-person' | 'loading' | 'private-choice' | 'deal' | 'play' | 'end'
 type ReadyScreen = 'private-choice' | 'deal' | 'play'
 
 export default function App() {
@@ -103,9 +105,13 @@ export default function App() {
     setReadyScreen(destination)
     setScreen('loading')
   }
-  const start = () => prepare(assignRandomCognitionNames(createTimedGame()), 'private-choice')
+  const start = () => {
+    setGame(assignRandomCognitionNames(createTimedGame()))
+    setScreen('shared-person')
+  }
 
   if (!game || screen === 'home') return <Home onStart={start} />
+  if (screen === 'shared-person') return <SharedPersonSetupScreen game={game} onConfirm={(name) => prepare(withSharedPersonName(game, name), 'private-choice')} />
   if (screen === 'loading') return <LoadingScreen game={game} onReady={() => setScreen(readyScreen)} />
   if (screen === 'private-choice') return <PrivateNeedChoiceScreen game={game} onChoose={(cardId) => {
     setGame(choosePrivateNeed(game, cardId))
