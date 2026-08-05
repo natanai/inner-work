@@ -1,14 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { CardBack, CardFace, GiftIcon } from './Cards'
+import { CardFace, GiftIcon } from './Cards'
+import { cognitionIdentity, cognitionSymbol } from './cognitionIdentity'
 import type { Cognition, GameState } from './model'
 import { analyzeStrategy, applyTrade, generateTradeProposals, type StrategyAnalysis, type TradeProposal } from './trading'
-
-function symbol(cognition: Cognition): string {
-  if (cognition.id === 'alpha') return 'α'
-  if (cognition.id === 'beta') return 'β'
-  return 'γ'
-}
 
 function unique(items: string[]): string[] {
   return [...new Set(items)]
@@ -17,26 +12,7 @@ function unique(items: string[]): string[] {
 function responsibilityText(analysis: StrategyAnalysis): string {
   const own = unique(analysis.ownPublic.map((match) => match.need))
   const bonus = unique(analysis.bonusNeeds.map((need) => need.need))
-  return [
-    own.length ? `your Public Need${own.length === 1 ? '' : 's'}: ${own.join(', ')}` : '',
-    bonus.length ? `active Bonus Need${bonus.length === 1 ? '' : 's'}: ${bonus.join(', ')}` : '',
-  ].filter(Boolean).join(' and ')
-}
-
-function alsoHelpsText(analysis: StrategyAnalysis): string {
-  const grouped = new Map<string, string[]>()
-  for (const match of analysis.otherPublic) {
-    const current = grouped.get(match.cognitionName) ?? []
-    grouped.set(match.cognitionName, unique([...current, match.need]))
-  }
-  return [...grouped.entries()].map(([name, needs]) => `${name}: ${needs.join(', ')}`).join(' · ')
-}
-
-function tradeTargets(analysis: StrategyAnalysis, playerId: string): string {
-  return analysis.playableBy
-    .filter((target) => target.cognitionId !== playerId)
-    .map((target) => `${target.cognitionName} could play it for ${target.needs.join(', ')}`)
-    .join(' · ')
+  return [own.join(', '), bonus.join(', ')].filter(Boolean).join(' · ')
 }
 
 function InfoDisclosure({ label, children }: { label: string; children: ReactNode }) {
@@ -48,82 +24,32 @@ function InfoDisclosure({ label, children }: { label: string; children: ReactNod
   )
 }
 
-function OwnershipBoard({ game }: { game: GameState }) {
+function CognitionSnapshot({ cognition }: { cognition: Cognition }) {
+  const identity = cognitionIdentity(cognition)
   return (
-    <section className="discussion-section responsibility-board">
-      <header><span>Public responsibilities</span><h2>Who can qualify each play?</h2></header>
-      <div className="responsibility-grid">
-        {game.cognitions.map((cognition) => (
-          <article key={cognition.id} className={`responsibility-card owner-${cognition.id}`}>
-            <header><b>{symbol(cognition)}</b><div><span>{cognition.human ? 'You' : 'NPC'}</span><strong>{cognition.name}</strong></div></header>
-            <div>
-              {cognition.publicNeeds.map((slot) => (
-                <p key={slot.card.id} className={slot.gifts === 0 ? 'complete' : ''}>
-                  <span><small>{slot.card.feeling}</small><strong>{slot.card.need}</strong></span>
-                  <b><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} />{slot.gifts}</b>
-                </p>
-              ))}
-            </div>
-          </article>
+    <article className={`planning-cognition-snapshot owner-${cognition.id}`}>
+      <header>
+        <b>{cognitionSymbol(cognition)}</b>
+        <div><span>{identity.role}</span><strong>{identity.name}</strong></div>
+      </header>
+      <div>
+        {cognition.publicNeeds.map((slot) => (
+          <p key={slot.card.id} className={slot.gifts === 0 ? 'complete' : ''}>
+            <span><small>{slot.card.feeling}</small><strong>{slot.card.need}</strong></span>
+            <b><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} />{slot.gifts}</b>
+          </p>
         ))}
       </div>
-      <InfoDisclosure label="Why ownership matters">
-        <p>A Cognition may play a Strategy only when it tends one of its own unresolved Public Needs or an active Bonus Need. Once legally played, that Strategy can also tend matching Needs belonging to anyone.</p>
-      </InfoDisclosure>
-    </section>
+    </article>
   )
 }
 
-function PrivateGoal({ game, onReview }: { game: GameState; onReview: () => void }) {
-  const player = game.cognitions.find((cognition) => cognition.human)
-  if (!player) return null
+function PlanningSnapshot({ game }: { game: GameState }) {
   return (
-    <section className={`private-goal ${player.privateVisible ? 'known' : 'unknown'}`}>
-      <span>Private opportunity</span>
-      {player.privateVisible ? (
-        <><h2>{player.privateNeed.card.need} is visible.</h2><p>Look carefully; it will return face down when you close the review.</p></>
-      ) : player.magnifierUsed ? (
-        <><h2>Your magnifier has been used.</h2><p>Rely on what you remember for the rest of this Situation.</p></>
-      ) : (
-        <><h2>Your Private Need remains face down.</h2><button className="private-goal-review" onClick={onReview}>Use the magnifying glass</button></>
-      )}
-      <InfoDisclosure label="How Private points work">
-        <p>Any Cognition’s legally played Strategy may incidentally tend your Private Need. Its gift still becomes your individual point.</p>
-      </InfoDisclosure>
+    <section className="planning-snapshot" aria-label="Public Needs at a glance">
+      <header><span>Needs at a glance</span><strong>Choose a route that tends one of your unresolved Needs.</strong></header>
+      <div>{game.cognitions.map((cognition) => <CognitionSnapshot key={cognition.id} cognition={cognition} />)}</div>
     </section>
-  )
-}
-
-function HandPlanner({ game }: { game: GameState }) {
-  const player = game.cognitions.find((cognition) => cognition.human)
-  if (!player) return null
-  const privateKnown = player.privateVisible
-  return (
-    <details className="discussion-section hand-planner progressive-panel">
-      <summary><span>Card guidance</span><strong>Check why each Strategy is playable</strong><b>＋</b></summary>
-      <div className="planner-cards">
-        {player.hand.map((card) => {
-          const analysis = analyzeStrategy(game, player, card)
-          const helps = alsoHelpsText(analysis)
-          const targets = tradeTargets(analysis, player.id)
-          return (
-            <article key={card.id} className={analysis.playable ? 'legal' : 'trade-candidate'}>
-              <div className="planner-card-image"><CardFace kind="strategy" id={card.id} /></div>
-              <div className="planner-card-copy">
-                <span>{analysis.playable ? 'Playable' : 'Trade or discard'}</span>
-                <h3>{card.title}</h3>
-                {analysis.playable
-                  ? <p><b>Qualifies through:</b> {responsibilityText(analysis)}.</p>
-                  : <p>It does not currently tend your Public Needs or an active Bonus Need.</p>}
-                {helps && <p><b>Also helps:</b> {helps}.</p>}
-                {privateKnown && analysis.tendsOwnPrivate && <p className="private-opportunity"><b>Private opportunity:</b> also tends {player.privateNeed.card.need}.</p>}
-                {!analysis.playable && targets && <p className="trade-opportunity"><b>Useful to trade:</b> {targets}.</p>}
-              </div>
-            </article>
-          )
-        })}
-      </div>
-    </details>
   )
 }
 
@@ -131,24 +57,44 @@ function ProposalCard({ game, proposal, onAccept }: { game: GameState; proposal:
   const player = game.cognitions.find((cognition) => cognition.human)
   const privateKnown = Boolean(player?.privateVisible)
   return (
-    <article className={`trade-proposal ${proposal.mutualUpgrade ? 'mutual-upgrade' : ''}`}>
-      <header>
-        <div><span>{proposal.mutualUpgrade ? 'Mutual upgrade' : 'Fair exchange'}</span><h3>{proposal.npcName} offers a swap</h3></div>
-        <b>{symbol(game.cognitions.find((cognition) => cognition.id === proposal.npcId) ?? game.cognitions[1])}</b>
-      </header>
+    <article className={`trade-proposal compact ${proposal.mutualUpgrade ? 'mutual-upgrade' : ''}`}>
+      <header><div><span>{proposal.mutualUpgrade ? 'Mutual upgrade' : 'Available swap'}</span><h3>{proposal.npcName}</h3></div><b>{cognitionSymbol(proposal.npcId)}</b></header>
       <div className="trade-cards">
-        <section><span>You give</span><CardFace kind="strategy" id={proposal.playerGives.id} /><strong>{proposal.playerGives.title}</strong></section>
+        <section><span>Give</span><CardFace kind="strategy" id={proposal.playerGives.id} /><strong>{proposal.playerGives.title}</strong></section>
         <i aria-hidden="true">⇄</i>
-        <section><span>You receive</span><CardFace kind="strategy" id={proposal.npcGives.id} /><strong>{proposal.npcGives.title}</strong></section>
+        <section><span>Receive</span><CardFace kind="strategy" id={proposal.npcGives.id} /><strong>{proposal.npcGives.title}</strong></section>
       </div>
-      <button className="primary" onClick={onAccept}>Accept trade</button>
-      <InfoDisclosure label="Why this trade works">
-        <p>{proposal.npcName} can play your card for {unique(proposal.npcReceives.ownPublic.map((match) => match.need)).join(', ') || 'an active Bonus Need'}.</p>
-        <p>You can play the offered card for {responsibilityText(proposal.playerReceives)}.</p>
-        {privateKnown && proposal.playerReceives.tendsOwnPrivate && <p><b>Private opportunity:</b> the offered card also tends your currently visible Private Need.</p>}
-        <p>Only this return card is revealed; the rest of {proposal.npcName}’s hand stays hidden.</p>
+      <button className="primary" onClick={onAccept}>Make trade</button>
+      <InfoDisclosure label="Why it works">
+        <p>{proposal.npcName} can use your card, and the offered card qualifies through {responsibilityText(proposal.playerReceives) || 'an active route'}.</p>
+        {privateKnown && proposal.playerReceives.tendsOwnPrivate && <p>The offered card also tends your visible Private Need.</p>}
       </InfoDisclosure>
     </article>
+  )
+}
+
+function HandPlanner({ game }: { game: GameState }) {
+  const player = game.cognitions.find((cognition) => cognition.human)
+  if (!player) return null
+  return (
+    <details className="discussion-section hand-planner progressive-panel planning-tool-panel">
+      <summary><span>Card guide</span><strong>Why can I play each card?</strong><b>＋</b></summary>
+      <div className="planner-cards">
+        {player.hand.map((card) => {
+          const analysis = analyzeStrategy(game, player, card)
+          return (
+            <article key={card.id} className={analysis.playable ? 'legal' : 'trade-candidate'}>
+              <div className="planner-card-image"><CardFace kind="strategy" id={card.id} /></div>
+              <div className="planner-card-copy">
+                <span>{analysis.playable ? 'Playable' : 'Trade or discard'}</span>
+                <h3>{card.title}</h3>
+                <p>{analysis.playable ? responsibilityText(analysis) || 'Active route' : 'No visible match'}</p>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </details>
   )
 }
 
@@ -177,8 +123,6 @@ function useMobilePlanningTarget(): { target: HTMLElement | null; phone: boolean
 
 export function TradeDiscussionLayer({ game, onGameChange, children }: { game: GameState; onGameChange: (game: GameState) => void; children: ReactNode }) {
   const [open, setOpen] = useState(false)
-  const [privateConfirmOpen, setPrivateConfirmOpen] = useState(false)
-  const [privateReviewOpen, setPrivateReviewOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const proposals = useMemo(() => generateTradeProposals(game), [game])
   const player = game.cognitions.find((cognition) => cognition.human)
@@ -186,56 +130,19 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
 
   const accept = (proposal: TradeProposal) => {
     onGameChange(applyTrade(game, proposal))
-    setNotice(`Trade complete: you received “${proposal.npcGives.title}.”`)
+    setNotice(`Trade complete: “${proposal.npcGives.title}” is now in your hand.`)
   }
 
-  const requestPrivateReview = () => {
+  const openMagnifier = () => {
     if (!player || player.magnifierUsed || game.phase !== 'planning') return
     setOpen(false)
-    setPrivateConfirmOpen(true)
+    window.dispatchEvent(new Event('inner-work:open-magnifier'))
   }
-
-  const confirmPrivateReview = () => {
-    if (!player || player.magnifierUsed || game.phase !== 'planning') {
-      setPrivateConfirmOpen(false)
-      return
-    }
-    setPrivateConfirmOpen(false)
-    onGameChange({
-      ...game,
-      cognitions: game.cognitions.map((cognition) => cognition.id === player.id
-        ? { ...cognition, privateVisible: true, magnifierUsed: true }
-        : cognition),
-    })
-    setPrivateReviewOpen(true)
-  }
-
-  const closePrivateReview = () => {
-    if (player) {
-      onGameChange({
-        ...game,
-        cognitions: game.cognitions.map((cognition) => cognition.id === player.id
-          ? { ...cognition, privateVisible: false }
-          : cognition),
-      })
-    }
-    setPrivateReviewOpen(false)
-  }
-
-  useEffect(() => {
-    const handleReview = () => requestPrivateReview()
-    window.addEventListener('inner-work:review-private', handleReview)
-    return () => window.removeEventListener('inner-work:review-private', handleReview)
-  }, [game, player])
-
-  useEffect(() => {
-    if (game.phase !== 'planning' || player?.magnifierUsed) setPrivateConfirmOpen(false)
-  }, [game.phase, player?.magnifierUsed])
 
   const launch = game.phase === 'planning' ? (
     <button className={`discussion-launch ${phone ? 'discussion-launch-in-flow' : ''}`} onClick={() => setOpen(true)}>
       <span>Before choosing</span>
-      <strong>Planning tools</strong>
+      <strong>Plan or trade</strong>
       {proposals.length > 0 && <b>{proposals.length}</b>}
     </button>
   ) : null
@@ -246,64 +153,44 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
       {phone && target && launch ? createPortal(launch, target) : !phone ? launch : null}
 
       {open && (
-        <dialog open className="discussion-dialog" onClick={() => setOpen(false)} aria-label="Discussion and trading phase">
+        <dialog open className="discussion-dialog planning-dialog-condensed" onClick={() => setOpen(false)} aria-label="Planning and trading">
           <div className="discussion-dialog-inner" onClick={(event) => event.stopPropagation()}>
             <header className="discussion-dialog-header">
-              <div><span>Discussion phase</span><h1>Plan before you commit.</h1></div>
-              <button onClick={() => setOpen(false)} aria-label="Close discussion">×</button>
+              <div><span>Discussion phase</span><h1>Choose your next move.</h1></div>
+              <button onClick={() => setOpen(false)} aria-label="Close planning">×</button>
             </header>
 
-            <InfoDisclosure label="How discussion and trading work">
-              <p>Each Cognition needs a Strategy it can legally play through its own Public Need or an active Bonus Need. Trade any number of cards before everyone commits. NPC hands remain hidden except for a specific card offered in a trade.</p>
-            </InfoDisclosure>
-
+            <p className="planning-one-line">Play a Strategy, trade, use a tool, or deliberately discard.</p>
             {notice && <p className="trade-notice">{notice}</p>}
-            <OwnershipBoard game={game} />
-            <PrivateGoal game={game} onReview={requestPrivateReview} />
+            <PlanningSnapshot game={game} />
 
-            <section className="discussion-section trade-room">
-              <header><span>Suggested trades</span><h2>{proposals.length > 0 ? 'Useful swaps available' : 'No useful swap right now'}</h2></header>
-              {proposals.length > 0
-                ? <div className="trade-proposal-list">{proposals.map((proposal) => <ProposalCard key={proposal.id} game={game} proposal={proposal} onAccept={() => accept(proposal)} />)}</div>
-                : <div className="no-trades"><strong>Continue with a legal Strategy or discard.</strong></div>}
+            <section className="planning-action-strip" aria-label="Planning tools">
+              <button className="planning-magnifier-action" disabled={!player || player.magnifierUsed} onClick={openMagnifier}>
+                <b aria-hidden="true">⌕</b>
+                <span><strong>Magnifier</strong><small>{player?.magnifierUsed ? 'Already used' : 'Choose one official use'}</small></span>
+              </button>
+              <button onClick={() => document.querySelector<HTMLElement>('.planning-trade-panel')?.setAttribute('open', '')}>
+                <b aria-hidden="true">⇄</b>
+                <span><strong>Trade</strong><small>{proposals.length ? `${proposals.length} suggested` : 'Ask for a Need'}</small></span>
+              </button>
             </section>
 
+            <details className="discussion-section planning-tool-panel planning-trade-panel">
+              <summary><span>Trading</span><strong>See trade options</strong><b>＋</b></summary>
+              <div className="trade-room">
+                {proposals.length > 0 && <div className="trade-proposal-list">{proposals.map((proposal) => <ProposalCard key={proposal.id} game={game} proposal={proposal} onAccept={() => accept(proposal)} />)}</div>}
+                {proposals.length === 0 && <p className="no-trades"><strong>No suggested swap.</strong> You can still request a card by Need below.</p>}
+              </div>
+            </details>
+
             <HandPlanner game={game} />
-            <footer><button className="primary" onClick={() => setOpen(false)}>Return to your hand</button></footer>
+
+            <InfoDisclosure label="How planning works">
+              <p>A legal Strategy tends one of your unresolved Public Needs or an active Bonus Need. NPC hands stay hidden except for a specific trade offer.</p>
+            </InfoDisclosure>
+
+            <footer><button className="primary" onClick={() => setOpen(false)}>Return to hand</button></footer>
           </div>
-        </dialog>
-      )}
-
-      {privateConfirmOpen && player && (
-        <dialog open className="private-review-dialog private-review-confirm-dialog" onClick={() => setPrivateConfirmOpen(false)} aria-label="Confirm magnifying glass use">
-          <section onClick={(event) => event.stopPropagation()}>
-            <span>Magnifying glass · one use this Situation</span>
-            <h1>Review your Private Need?</h1>
-            <p>Confirming will spend the magnifying glass for this Situation. You can look at the card now, but it returns face down when you close the review.</p>
-            <div className="private-confirm-card"><CardBack kind="need" className="large-private" /></div>
-            <InfoDisclosure label="What the magnifier does">
-              <p>It lets you review the Private Need you chose during setup. You may use it only once during each Situation.</p>
-            </InfoDisclosure>
-            <footer className="private-confirm-actions">
-              <button className="quiet" onClick={() => setPrivateConfirmOpen(false)}>Not yet</button>
-              <button className="primary" onClick={confirmPrivateReview}>Use magnifying glass</button>
-            </footer>
-          </section>
-        </dialog>
-      )}
-
-      {privateReviewOpen && player && (
-        <dialog open className="private-review-dialog" onClick={closePrivateReview} aria-label="Review your Private Need">
-          <section onClick={(event) => event.stopPropagation()}>
-            <span>Magnifying glass · one review this Situation</span>
-            <h1>Look carefully.</h1>
-            <div><CardFace kind="need" id={player.privateNeed.card.id} /></div>
-            <strong>{player.privateNeed.card.feeling}: {player.privateNeed.card.need}</strong>
-            <InfoDisclosure label="Why this matters">
-              <p>Any Cognition may incidentally tend this Need through a legally played Strategy. The individual point belongs to you.</p>
-            </InfoDisclosure>
-            <button className="primary" onClick={closePrivateReview}>Return it face down</button>
-          </section>
         </dialog>
       )}
     </div>
