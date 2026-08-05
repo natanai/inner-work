@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CardFace, GiftIcon } from './Cards'
-import { cognitionIdentity, cognitionSymbol } from './cognitionIdentity'
+import { cognitionIdentity, cognitionSeat } from './cognitionIdentity'
 import type { Cognition, GameState } from './model'
 import { analyzeStrategy, applyTrade, generateTradeProposals, type StrategyAnalysis, type TradeProposal } from './trading'
 
@@ -29,7 +29,7 @@ function CognitionSnapshot({ cognition }: { cognition: Cognition }) {
   return (
     <article className={`planning-cognition-snapshot owner-${cognition.id}`}>
       <header>
-        <b>{cognitionSymbol(cognition)}</b>
+        <b>{identity.seat}</b>
         <div><span>{identity.role}</span><strong>{identity.name}</strong></div>
       </header>
       <div>
@@ -58,7 +58,7 @@ function ProposalCard({ game, proposal, onAccept }: { game: GameState; proposal:
   const privateKnown = Boolean(player?.privateVisible)
   return (
     <article className={`trade-proposal compact ${proposal.mutualUpgrade ? 'mutual-upgrade' : ''}`}>
-      <header><div><span>{proposal.mutualUpgrade ? 'Mutual upgrade' : 'Available swap'}</span><h3>{proposal.npcName}</h3></div><b>{cognitionSymbol(proposal.npcId)}</b></header>
+      <header><div><span>{proposal.mutualUpgrade ? 'Mutual upgrade' : 'Available swap'}</span><h3>{proposal.npcName}</h3></div><b>{cognitionSeat(proposal.npcId)}</b></header>
       <div className="trade-cards">
         <section><span>Give</span><CardFace kind="strategy" id={proposal.playerGives.id} /><strong>{proposal.playerGives.title}</strong></section>
         <i aria-hidden="true">⇄</i>
