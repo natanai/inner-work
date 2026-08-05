@@ -1,0 +1,46 @@
+name: Choice-floor audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      trials:
+        description: Number of simulated deals
+        required: false
+        default: '50000'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run repeatable choice audit
+        env:
+          TRIALS: ${{ inputs.trials || '50000' }}
+        run: |
+          node scripts/choice-audit.mjs --trials "$TRIALS" --seed 20260803 > choice-audit.md
+          cat choice-audit.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save machine-readable audit
+        env:
+          TRIALS: ${{ inputs.trials || '50000' }}
+        run: node scripts/choice-audit.mjs --trials "$TRIALS" --seed 20260803 --json > choice-audit.json
+
+      - name: Upload audit files
+        uses: actions/upload-artifact@v4
+        with:
+          name: choice-floor-audit
+          path: |
+            choice-audit.md
+            choice-audit.json
