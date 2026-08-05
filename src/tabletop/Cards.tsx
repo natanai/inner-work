@@ -129,20 +129,26 @@ export function NeedCardOnTable({
 export function Magnifier({
   used,
   disabled,
-  onClick,
+  onClick: legacyPrivateOnlyAction,
 }: {
   used: boolean
   disabled: boolean
   onClick: () => void
 }) {
+  const openOfficialMenu = () => {
+    if (disabled || used) return
+    void legacyPrivateOnlyAction
+    window.dispatchEvent(new Event('inner-work:open-magnifier'))
+  }
+
   return (
-    <button className={`magnifier ${used ? 'used' : ''}`} disabled={disabled} onClick={onClick} aria-label="Look at your Private Need">
+    <button className={`magnifier ${used ? 'used' : ''}`} disabled={disabled} onClick={openOfficialMenu} aria-label={used ? 'Magnifying glass already used this Situation' : 'Choose one of four Magnifying Glass actions'}>
       <svg viewBox="0 0 72 72" aria-hidden="true">
         <circle className="magnifier-lens" cx="29" cy="29" r="19" />
         <circle className="magnifier-shine" cx="23" cy="23" r="8" />
         <path className="magnifier-handle" d="m43 43 19 19" />
       </svg>
-      <span>{used ? 'Used' : 'Look'}</span>
+      <span>{used ? 'Used' : 'Choose'}</span>
     </button>
   )
 }
