@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CardFace, GiftIcon } from './Cards'
-import { cognitionIdentity, cognitionSeat } from './cognitionIdentity'
+import { CognitionSeatBadge } from './CognitionSeatBadge'
+import { cognitionIdentity } from './cognitionIdentity'
 import type { Cognition, GameState } from './model'
 import { analyzeStrategy, applyTrade, generateTradeProposals, type StrategyAnalysis, type TradeProposal } from './trading'
+
+type PlanningView = 'overview' | 'trade'
 
 function unique(items: string[]): string[] {
   return [...new Set(items)]
@@ -29,7 +32,7 @@ function CognitionSnapshot({ cognition }: { cognition: Cognition }) {
   return (
     <article className={`planning-cognition-snapshot owner-${cognition.id}`}>
       <header>
-        <b>{identity.seat}</b>
+        <CognitionSeatBadge cognition={cognition} />
         <div><span>{identity.role}</span><strong>{identity.name}</strong></div>
       </header>
       <div>
@@ -58,7 +61,7 @@ function ProposalCard({ game, proposal, onAccept }: { game: GameState; proposal:
   const privateKnown = Boolean(player?.privateVisible)
   return (
     <article className={`trade-proposal compact ${proposal.mutualUpgrade ? 'mutual-upgrade' : ''}`}>
-      <header><div><span>{proposal.mutualUpgrade ? 'Mutual upgrade' : 'Available swap'}</span><h3>{proposal.npcName}</h3></div><b>{cognitionSeat(proposal.npcId)}</b></header>
+      <header><div><span>{proposal.mutualUpgrade ? 'Mutual upgrade' : 'Available swap'}</span><h3>{proposal.npcName}</h3></div><CognitionSeatBadge cognition={proposal.npcId} /></header>
       <div className="trade-cards">
         <section><span>Give</span><CardFace kind="strategy" id={proposal.playerGives.id} /><strong>{proposal.playerGives.title}</strong></section>
         <i aria-hidden="true">⇄</i>
@@ -123,10 +126,21 @@ function useMobilePlanningTarget(): { target: HTMLElement | null; phone: boolean
 
 export function TradeDiscussionLayer({ game, onGameChange, children }: { game: GameState; onGameChange: (game: GameState) => void; children: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const [view, setView] = useState<PlanningView>('overview')
   const [notice, setNotice] = useState<string | null>(null)
   const proposals = useMemo(() => generateTradeProposals(game), [game])
   const player = game.cognitions.find((cognition) => cognition.human)
   const { target, phone } = useMobilePlanningTarget()
+
+  const close = () => {
+    setOpen(false)
+    setView('overview')
+  }
+
+  const showPlanning = () => {
+    setView('overview')
+    setOpen(true)
+  }
 
   const accept = (proposal: TradeProposal) => {
     onGameChange(applyTrade(game, proposal))
@@ -135,12 +149,12 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
 
   const openMagnifier = () => {
     if (!player || player.magnifierUsed || game.phase !== 'planning') return
-    setOpen(false)
+    close()
     window.dispatchEvent(new Event('inner-work:open-magnifier'))
   }
 
   const launch = game.phase === 'planning' ? (
-    <button className={`discussion-launch ${phone ? 'discussion-launch-in-flow' : ''}`} onClick={() => setOpen(true)}>
+    <button className={`discussion-launch ${phone ? 'discussion-launch-in-flow' : ''}`} onClick={showPlanning}>
       <span>Before choosing</span>
       <strong>Plan or trade</strong>
       {proposals.length > 0 && <b>{proposals.length}</b>}
@@ -153,43 +167,48 @@ export function TradeDiscussionLayer({ game, onGameChange, children }: { game: G
       {phone && target && launch ? createPortal(launch, target) : !phone ? launch : null}
 
       {open && (
-        <dialog open className="discussion-dialog planning-dialog-condensed" onClick={() => setOpen(false)} aria-label="Planning and trading">
+        <dialog open className={`discussion-dialog planning-dialog-condensed planning-view-${view}`} onClick={close} aria-label="Planning and trading">
           <div className="discussion-dialog-inner" onClick={(event) => event.stopPropagation()}>
             <header className="discussion-dialog-header">
-              <div><span>Discussion phase</span><h1>Choose your next move.</h1></div>
-              <button onClick={() => setOpen(false)} aria-label="Close planning">×</button>
+              <div><span>Discussion phase</span><h1>{view === 'trade' ? 'Choose a trade.' : 'Choose your next move.'}</h1></div>
+              <button onClick={close} aria-label="Close planning">×</button>
             </header>
 
-            <p className="planning-one-line">Play a Strategy, trade, use a tool, or deliberately discard.</p>
-            {notice && <p className="trade-notice">{notice}</p>}
-            <PlanningSnapshot game={game} />
+            {view === 'overview' ? <>
+              {notice && <p className="trade-notice">{notice}</p>}
+              <PlanningSnapshot game={game} />
 
-            <section className="planning-action-strip" aria-label="Planning tools">
-              <button className="planning-magnifier-action" disabled={!player || player.magnifierUsed} onClick={openMagnifier}>
-                <b aria-hidden="true">⌕</b>
-                <span><strong>Magnifier</strong><small>{player?.magnifierUsed ? 'Already used' : 'Choose one official use'}</small></span>
-              </button>
-              <button onClick={() => document.querySelector<HTMLElement>('.planning-trade-panel')?.setAttribute('open', '')}>
-                <b aria-hidden="true">⇄</b>
-                <span><strong>Trade</strong><small>{proposals.length ? `${proposals.length} suggested` : 'Ask for a Need'}</small></span>
-              </button>
-            </section>
+              <section className="planning-action-strip" aria-label="Planning tools">
+                <button className="planning-magnifier-action" disabled={!player || player.magnifierUsed} onClick={openMagnifier}>
+                  <b aria-hidden="true">⌕</b>
+                  <span><strong>Magnifier</strong><small>{player?.magnifierUsed ? 'Already used' : 'Choose one official use'}</small></span>
+                </button>
+                <button onClick={() => setView('trade')}>
+                  <b aria-hidden="true">⇄</b>
+                  <span><strong>Trade</strong><small>{proposals.length ? `${proposals.length} suggested` : 'Request by Need'}</small></span>
+                </button>
+              </section>
 
-            <details className="discussion-section planning-tool-panel planning-trade-panel">
-              <summary><span>Trading</span><strong>See trade options</strong><b>＋</b></summary>
+              <HandPlanner game={game} />
+
+              <InfoDisclosure label="How planning works">
+                <p>A legal Strategy tends one of your unresolved Public Needs or an active Bonus Need. NPC hands stay hidden except for a specific trade offer.</p>
+              </InfoDisclosure>
+            </> : <section className="planning-trade-workspace">
+              <button className="planning-back" onClick={() => setView('overview')}>← Back to planning</button>
+              <header>
+                <span>Trade workspace</span>
+                <h2>{proposals.length ? `${proposals.length} suggested swap${proposals.length === 1 ? '' : 's'}` : 'Request a card by Need'}</h2>
+                <p>Only the cards involved in a possible exchange are revealed.</p>
+              </header>
+              {notice && <p className="trade-notice">{notice}</p>}
               <div className="trade-room">
                 {proposals.length > 0 && <div className="trade-proposal-list">{proposals.map((proposal) => <ProposalCard key={proposal.id} game={game} proposal={proposal} onAccept={() => accept(proposal)} />)}</div>}
-                {proposals.length === 0 && <p className="no-trades"><strong>No suggested swap.</strong> You can still request a card by Need below.</p>}
+                {proposals.length === 0 && <p className="no-trades"><strong>No suggested swap.</strong> Request a card for a specific Need below.</p>}
               </div>
-            </details>
+            </section>}
 
-            <HandPlanner game={game} />
-
-            <InfoDisclosure label="How planning works">
-              <p>A legal Strategy tends one of your unresolved Public Needs or an active Bonus Need. NPC hands stay hidden except for a specific trade offer.</p>
-            </InfoDisclosure>
-
-            <footer><button className="primary" onClick={() => setOpen(false)}>Return to hand</button></footer>
+            <footer><button className="primary" onClick={close}>Return to hand</button></footer>
           </div>
         </dialog>
       )}
