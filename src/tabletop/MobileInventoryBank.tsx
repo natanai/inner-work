@@ -1,4 +1,5 @@
 import { GiftIcon } from './Cards'
+import { CognitionSeatBadge } from './CognitionSeatBadge'
 import { cognitionIdentity } from './cognitionIdentity'
 import type { GameState } from './model'
 
@@ -22,7 +23,7 @@ export function MobileInventoryBank({ game }: { game: GameState }) {
       </div>
 
       <div className="mobile-bank-item mobile-bank-personal" aria-label={`${personalScore} personal points for ${identity.name}`}>
-        <b aria-hidden="true">{identity.seat}</b>
+        <CognitionSeatBadge cognition={player} size="small" />
         <span>Yours</span>
         <strong>{personalScore}</strong>
       </div>
