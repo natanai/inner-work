@@ -16,7 +16,8 @@
     "test:choice-integrity": "node scripts/choice-integrity-check.mjs",
     "test:cognition-names": "node scripts/cognition-name-check.mjs",
     "test:mobile-ux": "node scripts/mobile-ux-regression-check.mjs",
-    "test:participant-identity": "node scripts/participant-identity-check.mjs"
+    "test:participant-identity": "node scripts/participant-identity-check.mjs",
+    "test:card-ux": "node scripts/card-ux-system-check.mjs"
   },
   "dependencies": {
     "react": "19.2.8",
