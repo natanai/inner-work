@@ -1,4 +1,5 @@
 import type { StrategyCard } from '../data/cards'
+import { sharedPersonName } from './gameParticipants'
 import type { BonusNeed, GameState, Resolution } from './model'
 import { isSpecialAction } from './specialActions'
 
@@ -67,6 +68,7 @@ export function nvcStory(game: GameState, line: Resolution): string {
     return `${specialOpening}${line.cognitionName}’s paired Strategy, “${line.strategy.title},” still did not match one of its unresolved Public Needs, a qualifying Private Need opened by the Special Action, or an active Bonus Need, so the Strategy was discarded.`
   }
 
+  const person = sharedPersonName(game)
   const matchingNeeds = positiveNeeds(game, line)
   const rows = publicRows(game)
   const ownPublic = unique(rows.filter((row) => row.cognitionId === line.cognitionId && row.before > 0 && matchingNeeds.has(row.need)).map((row) => row.need))
@@ -83,7 +85,7 @@ export function nvcStory(game: GameState, line: Resolution): string {
   const sentences = [
     specialOpening.trim(),
     `${line.cognitionName} was motivated by ${motive}.`,
-    `Through ${possessive(line.cognitionName)} influence, the shared person chose to ${strategyActionPhrase(line.strategy)} ${situationContextPhrase(game)} in an attempt to meet ${motiveReference}.`,
+    `Through ${possessive(line.cognitionName)} influence, ${person} chose to ${strategyActionPhrase(line.strategy)} ${situationContextPhrase(game)} in an attempt to meet ${motiveReference}.`,
   ].filter(Boolean)
 
   const otherPublic = new Map<string, string[]>()
@@ -104,5 +106,5 @@ export function nvcStory(game: GameState, line: Resolution): string {
 }
 
 export function bonusOriginPhrase(bonus: BonusNeed): string {
-  return `introduced by “${bonus.sourceStrategyTitle},” a shared action influenced by ${possessive(bonus.sourceCognitionName)} needs`
+  return `introduced by “${bonus.sourceStrategyTitle},” an action influenced by ${possessive(bonus.sourceCognitionName)} needs`
 }
