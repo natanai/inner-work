@@ -55,9 +55,14 @@ export function committedSpecialId(cognition: Pick<Cognition, 'selected'>): stri
 
 export function setOrdinaryCommit(current: string | null, strategyId: string | null): string | null {
   const commit = parseCommit(current)
+  const changedStrategy = commit.strategyId !== strategyId
   const requiresStrategy = commit.specialId === 'SA2' || commit.specialId === 'SA7'
-  const specialId = requiresStrategy && !strategyId ? null : commit.specialId
-  const target = specialId === 'SA7' && commit.strategyId !== strategyId ? null : specialId ? commit.target : null
+  const specialId = requiresStrategy && !strategyId
+    ? null
+    : commit.specialId === 'SA7' && changedStrategy
+      ? null
+      : commit.specialId
+  const target = specialId ? commit.target : null
   const playForPrivate = specialId === 'SA2'
   return encodeCommit({ strategyId, specialId, target, playForPrivate })
 }
