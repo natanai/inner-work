@@ -1,12 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { StrategyCard } from '../data/cards'
 import { CardFace, strategyText } from './Cards'
-import { cardIsCommitted, parseCommit, setOrdinaryCommit } from './commitSelection'
-import { canPlayCommitted, type GameState } from './model'
+import { cardIsCommitted, parseCommit, setOrdinaryCommit, setPrivateOrdinaryCommit } from './commitSelection'
+import type { GameState } from './model'
 import { openSpecialAction } from './SpecialActionLayer'
 import { isSpecialAction } from './specialActions'
 import { StrategyContributionDetails, StrategyQuickSummary } from './StrategyContributionDetails'
+import { canPlayVisible, groupPrivatePlayActive } from './timedSpecialActions'
 
 type GestureAxis = 'pending' | 'horizontal' | 'vertical'
 type HandMode = 'docked' | 'undocked'
@@ -62,6 +63,8 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
   const inspectorGestureAxis = useRef<GestureAxis>('pending')
   const handKey = cards.map((card) => card.id).join('|')
   const inspected = inspectedIndex === null ? null : cards[wrap(inspectedIndex, cards.length)] ?? null
+  const privateRouteOpen = groupPrivatePlayActive(game)
+  const commit = parseCommit(player.selected)
 
   useLayoutEffect(() => {
     document.documentElement.dataset.strategyHand = handMode
@@ -145,12 +148,24 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
       openSpecialAction(card.id)
       return
     }
-    const commit = parseCommit(player.selected)
-    const nextOrdinary = commit.strategyId === card.id ? null : card.id
+    const current = parseCommit(player.selected)
+    const nextOrdinary = current.strategyId === card.id && !current.playForPrivate ? null : card.id
     onGameChange({
       ...game,
       cognitions: game.cognitions.map((cognition) => cognition.id === player.id
         ? { ...cognition, selected: setOrdinaryCommit(cognition.selected, nextOrdinary) }
+        : cognition),
+    })
+  }
+
+  const choosePrivate = (card: StrategyCard) => {
+    if (isSpecialAction(card) || !privateRouteOpen) return
+    const current = parseCommit(player.selected)
+    const nextOrdinary = current.strategyId === card.id && current.playForPrivate ? null : card.id
+    onGameChange({
+      ...game,
+      cognitions: game.cognitions.map((cognition) => cognition.id === player.id
+        ? { ...cognition, selected: setPrivateOrdinaryCommit(cognition.selected, nextOrdinary) }
         : cognition),
     })
   }
@@ -163,9 +178,22 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
     </section>, handTarget,
   ) : null
 
+  const inlineHand = handTarget && handMode === 'undocked' ? createPortal(
+    <div className="phase-aware-inline-hand" aria-label="Your phase-aware Strategy hand">
+      {cards.map((card, index) => {
+        const special = isSpecialAction(card)
+        const selected = cardIsCommitted(player, card.id)
+        const privateSelected = !special && commit.strategyId === card.id && commit.playForPrivate
+        const legal = special || canPlayVisible(game, player, card)
+        return <button className={`${selected ? 'selected' : ''} ${privateSelected ? 'private-targeted' : ''}`} key={card.id} onClick={() => setInspectedIndex(index)} aria-label={`Inspect ${card.title}`}><CardFace kind="strategy" id={card.id} /><span><small>{special ? 'Special Action' : privateSelected ? 'Assigned to Private Need' : legal ? 'Visible legal route' : 'No visible match'}</small><strong>{card.title}</strong>{selected && <b>{special ? 'Prepared' : privateSelected ? 'Private target' : 'Chosen'}</b>}</span></button>
+      })}
+    </div>, handTarget,
+  ) : null
+
   return (
     <>
       {preference}
+      {inlineHand}
       {handMode === 'docked' && (
         <aside className="sticky-strategy-hand" aria-label="Your Strategy hand">
           <div className="sticky-hand-caption"><span>Your hand</span><b>{frontIndex + 1} of {cards.length}</b><small>Tap the front card to inspect</small></div>
@@ -174,19 +202,20 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
               const order = wrap(index - frontIndex, cards.length)
               const front = order === 0
               const selected = cardIsCommitted(player, card.id)
+              const privateSelected = !isSpecialAction(card) && commit.strategyId === card.id && commit.playForPrivate
               const visibleOrder = Math.min(order, offsets.length - 1)
               const style: CSSProperties = {
                 zIndex: front ? cards.length + 2 : cards.length - visibleOrder,
                 transform: `translateX(calc(-50% + ${offsets[visibleOrder]}px)) translateY(${front ? 0 : 8 + visibleOrder * 3}px) rotate(${front ? 0 : offsets[visibleOrder] / 24}deg) scale(${front ? 1 : .94 - visibleOrder * .015})`,
               }
               return (
-                <button className={`sticky-hand-card ${front ? 'front' : 'rear'} ${selected ? 'selected' : ''}`} style={style} key={card.id} onClick={() => {
+                <button className={`sticky-hand-card ${front ? 'front' : 'rear'} ${selected ? 'selected' : ''} ${privateSelected ? 'private-targeted' : ''}`} style={style} key={card.id} onClick={() => {
                   if (suppressClick.current) return
                   if (!front) setFrontIndex(index)
                   else setInspectedIndex(index)
                 }} aria-label={front ? `Inspect ${card.title}` : `Bring ${card.title} to the front`}>
                   <CardFace kind="strategy" id={card.id} />
-                  {selected && <span className="sticky-card-chosen">{isSpecialAction(card) ? 'Special prepared' : 'Chosen'}</span>}
+                  {selected && <span className="sticky-card-chosen">{isSpecialAction(card) ? 'Start Action' : privateSelected ? 'Private target' : 'Chosen'}</span>}
                 </button>
               )
             })}
@@ -209,12 +238,15 @@ export function StickyStrategyHand({ game, onGameChange }: { game: GameState; on
               <h2>{inspected.title}</h2>
               <p>{strategyText(inspected)}</p>
               <details className="strategy-contribution-disclosure"><summary>More contribution details</summary><StrategyContributionDetails game={game} cognition={player} card={inspected} compact /></details>
-              <button className="primary" onClick={() => { choose(inspected); if (!isSpecialAction(inspected)) setInspectedIndex(null) }}>
-                {cardIsCommitted(player, inspected.id)
-                  ? isSpecialAction(inspected) ? 'Review or remove this Special Action' : 'Undo this choice'
-                  : isSpecialAction(inspected) ? 'Configure this Special Action'
-                    : canPlayCommitted(game, player, inspected) ? 'Choose this Strategy' : 'Choose to discard'}
-              </button>
+              <div className="sticky-inspector-actions">
+                <button className="primary" onClick={() => { choose(inspected); if (!isSpecialAction(inspected)) setInspectedIndex(null) }}>
+                  {cardIsCommitted(player, inspected.id) && !(commit.strategyId === inspected.id && commit.playForPrivate)
+                    ? isSpecialAction(inspected) ? 'Review or remove this Start-of-Play Action' : 'Undo this choice'
+                    : isSpecialAction(inspected) ? 'Use or configure this Special Action'
+                      : canPlayVisible(game, player, inspected) ? 'Choose normally' : 'Choose to discard'}
+                </button>
+                {privateRouteOpen && !isSpecialAction(inspected) && <button className="quiet private-route" onClick={() => { choosePrivate(inspected); setInspectedIndex(null) }}>{commit.strategyId === inspected.id && commit.playForPrivate ? 'Undo Private assignment' : 'Assign to Private Need'}</button>}
+              </div>
             </section>
           </div>
         </dialog>

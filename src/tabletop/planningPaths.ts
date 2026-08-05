@@ -1,8 +1,15 @@
 import type { StrategyCard } from '../data/cards'
-import { encodeCommit } from './commitSelection'
+import { parseCommit } from './commitSelection'
 import { generateDirectedTradeOptions } from './directedTrading'
-import { canPlayCommitted, type Cognition, type GameState } from './model'
+import type { Cognition, GameState } from './model'
 import { isSpecialAction, type SpecialActionCard } from './specialActions'
+import {
+  canPlayVisible,
+  cognitionUsedSpecialAction,
+  eventEffectsActive,
+  groupPrivatePlayActive,
+  positiveStrength,
+} from './timedSpecialActions'
 
 export type PlanningPathKind = 'strategy' | 'trade' | 'special' | 'magnifier' | 'discard'
 export type PlanningPathAvailability = 'known' | 'uncertain'
@@ -25,26 +32,14 @@ function playerFor(game: GameState): Cognition {
   return game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
 }
 
-function withPlayerCommit(game: GameState, player: Cognition, selected: string | null): { game: GameState; player: Cognition } {
-  const cognitions = game.cognitions.map((cognition) => cognition.id === player.id ? { ...cognition, selected } : cognition)
-  return { game: { ...game, cognitions }, player: cognitions.find((cognition) => cognition.id === player.id)! }
-}
-
 function ordinaryPlayableAlone(game: GameState, player: Cognition, card: StrategyCard): boolean {
-  const prepared = withPlayerCommit(game, player, card.id)
-  return canPlayCommitted(prepared.game, prepared.player, card)
+  return canPlayVisible(game, player, card)
 }
 
-function positiveNeeds(card: StrategyCard, eventActive: boolean): string[] {
+function positiveNeeds(game: GameState, card: StrategyCard): string[] {
   if (isSpecialAction(card)) return []
-  const source = eventActive ? [...card.effects, ...card.eventEffects] : card.effects
+  const source = eventEffectsActive(game) ? [...card.effects, ...card.eventEffects] : card.effects
   return [...new Set(source.filter((effect) => effect.amount > 0).map((effect) => effect.need))]
-}
-
-function positiveStrength(card: StrategyCard, need: string, eventActive: boolean): number {
-  if (isSpecialAction(card)) return 0
-  const source = eventActive ? [...card.effects, ...card.eventEffects] : card.effects
-  return source.filter((effect) => effect.need === need && effect.amount > 0).reduce((total, effect) => total + effect.amount, 0)
 }
 
 function specialPath(
@@ -55,13 +50,12 @@ function specialPath(
   privacy: PlanningPrivacy,
 ): PlanningPath | null {
   const unresolvedPublic = game.cognitions.flatMap((cognition) => cognition.publicNeeds).filter((slot) => slot.gifts > 0)
-  const eventActive = game.situation.event
 
   if (card.id === 'SA1') {
     if (unresolvedPublic.length === 0) return null
     return {
       id: 'special:SA1', kind: 'special', label: card.title, availability: 'known',
-      reason: `Choose one of ${unresolvedPublic.length} unresolved Public Needs to replace.`,
+      reason: `Use now during Discussion and choose one of ${unresolvedPublic.length} unresolved Public Needs to replace.`,
       configurationCount: unresolvedPublic.length,
     }
   }
@@ -71,11 +65,11 @@ function specialPath(
     if (privacy === 'player') {
       return {
         id: 'special:SA2', kind: 'special', label: card.title, availability: 'uncertain',
-        reason: 'A paired Strategy may qualify through your face-down Private Need; the app will not confirm a match before resolution.',
+        reason: 'Assign one Strategy specifically to the face-down Private Need. A mismatch discards both cards without resolving the Strategy.',
         configurationCount: ordinary.length,
       }
     }
-    const matches = ordinary.filter((strategy) => positiveStrength(strategy, player.privateNeed.card.need, eventActive) > 0)
+    const matches = ordinary.filter((strategy) => positiveStrength(game, strategy, player.privateNeed.card.need) > 0)
     if (matches.length === 0) return null
     return {
       id: 'special:SA2', kind: 'special', label: card.title, availability: 'known',
@@ -88,17 +82,17 @@ function specialPath(
     if (privacy === 'player') {
       return {
         id: 'special:SA3', kind: 'special', label: card.title, availability: 'uncertain',
-        reason: 'This may open a Private-Need route for one or more Cognitions without revealing any face-down Need.',
+        reason: 'Use now during Discussion to open a private-targeted commitment option for every Cognition.',
         configurationCount: 1,
       }
     }
     const matchingCognitions = game.cognitions.filter((cognition) => cognition.hand.some((strategy) =>
-      !isSpecialAction(strategy) && positiveStrength(strategy, cognition.privateNeed.card.need, eventActive) > 0,
+      !isSpecialAction(strategy) && positiveStrength(game, strategy, cognition.privateNeed.card.need) > 0,
     )).length
     if (matchingCognitions === 0) return null
     return {
       id: 'special:SA3', kind: 'special', label: card.title, availability: 'known',
-      reason: `${matchingCognitions} ${matchingCognitions === 1 ? 'Cognition has' : 'Cognitions have'} a qualifying Private-Need route.`,
+      reason: `${matchingCognitions} ${matchingCognitions === 1 ? 'Cognition has' : 'Cognitions have'} a qualifying Private-Need assignment.`,
       configurationCount: matchingCognitions,
     }
   }
@@ -106,18 +100,18 @@ function specialPath(
   if (card.id === 'SA4') {
     return {
       id: 'special:SA4', kind: 'special', label: card.title, availability: 'known',
-      reason: 'Draw two random active Bonus Needs before ordinary Strategies resolve.',
+      reason: 'Use now during Discussion; draw two random active Bonus Needs that immediately change legality and trading.',
       configurationCount: 1,
     }
   }
 
   if (card.id === 'SA5') {
-    const pairings = ordinary.filter((strategy) => positiveStrength(strategy, 'Understanding', eventActive) > 0).length
+    const pairings = ordinary.filter((strategy) => positiveStrength(game, strategy, 'Understanding') > 0).length
     return {
       id: 'special:SA5', kind: 'special', label: card.title, availability: 'known',
       reason: pairings > 0
-        ? `Create Understanding immediately; ${pairings} card${pairings === 1 ? '' : 's'} in hand can tend it.`
-        : 'Create an active Bonus Need for Understanding before resolution.',
+        ? `Create Understanding now; ${pairings} card${pairings === 1 ? '' : 's'} in hand can immediately tend it.`
+        : 'Create an active Bonus Need for Understanding immediately during Discussion.',
       configurationCount: Math.max(1, pairings),
     }
   }
@@ -127,17 +121,17 @@ function specialPath(
     return {
       id: 'special:SA6', kind: 'special', label: card.title, availability: 'known',
       reason: pairings > 0
-        ? `Activate Event effects; ${pairings} card${pairings === 1 ? '' : 's'} in your hand visibly change.`
-        : 'Activate Event effects on every ordinary Strategy played this round, including hidden NPC plays.',
+        ? `Activate Event effects now; ${pairings} card${pairings === 1 ? '' : 's'} in your hand visibly change before commitment.`
+        : 'Activate Event effects immediately on every ordinary Strategy for the remainder of the round.',
       configurationCount: Math.max(1, pairings),
     }
   }
 
-  const boostTargets = ordinary.reduce((total, strategy) => total + positiveNeeds(strategy, eventActive).length, 0)
+  const boostTargets = ordinary.reduce((total, strategy) => total + positiveNeeds(game, strategy).length, 0)
   if (boostTargets === 0) return null
   return {
     id: 'special:SA7', kind: 'special', label: card.title, availability: 'known',
-    reason: `Choose among ${boostTargets} positive effect target${boostTargets === 1 ? '' : 's'} across the ordinary Strategies in hand.`,
+    reason: `Choose a Strategy and one of ${boostTargets} positive effect target${boostTargets === 1 ? '' : 's'} for the hidden Start-of-Play commitment.`,
     configurationCount: boostTargets,
   }
 }
@@ -177,10 +171,26 @@ export function enumeratePlanningPaths(game: GameState, options: PlanningPathOpt
     })
   }
 
+  const currentSpecial = parseCommit(player.selected).specialId
   specials.forEach((card) => {
+    if (cognitionUsedSpecialAction(game, player.id) && currentSpecial !== card.id) return
     const path = specialPath(game, player, card, ordinary, privacy)
     if (path) paths.push(path)
   })
+
+  if (groupPrivatePlayActive(game) && ordinary.length > 0) {
+    const actualMatches = ordinary.filter((card) => positiveStrength(game, card, player.privateNeed.card.need) > 0).length
+    if (privacy === 'player' || actualMatches > 0) paths.push({
+      id: 'special:SA3-private-assignment',
+      kind: 'special',
+      label: 'Assign a Strategy to your Private Need',
+      availability: privacy === 'player' ? 'uncertain' : 'known',
+      reason: privacy === 'player'
+        ? 'Group Therapy is active. Choose any ordinary Strategy as a private-targeted commitment; the match remains hidden until reveal.'
+        : `${actualMatches} Strategy${actualMatches === 1 ? '' : 'ies'} actually match the Private Need.`,
+      configurationCount: privacy === 'player' ? ordinary.length : actualMatches,
+    })
+  }
 
   if (!player.magnifierUsed) {
     const refreshConfigurations = Math.max(1, (2 ** player.hand.length) - 1)
@@ -212,7 +222,7 @@ export function enumeratePlanningPaths(game: GameState, options: PlanningPathOpt
     })
   }
 
-  if (playable.length === 0) paths.push({
+  if (playable.length === 0 && !groupPrivatePlayActive(game)) paths.push({
     id: 'discard:required', kind: 'discard', label: 'Discard one Strategy', availability: 'known',
     reason: 'No ordinary Strategy is visibly legal without another action changing the state.',
     configurationCount: Math.max(1, ordinary.length),

@@ -1,5 +1,6 @@
 import type { StrategyCard } from '../data/cards'
 import type { BonusNeed, Cognition, CognitionId, GameState } from './model'
+import { eventEffectsActive } from './timedSpecialActions'
 
 export type PublicMatch = {
   cognitionId: CognitionId
@@ -54,15 +55,11 @@ export type TradeProposal = {
   mutualUpgrade: boolean
 }
 
-function effectsFor(game: GameState, card: StrategyCard) {
-  return game.situation.event ? [...card.effects, ...card.eventEffects] : card.effects
-}
-
 function effectStrength(game: GameState, card: StrategyCard, need: string): { strength: number; eventStrength: number } {
   const standard = card.effects
     .filter((effect) => effect.need === need && effect.amount > 0)
     .reduce((total, effect) => total + effect.amount, 0)
-  const eventStrength = game.situation.event
+  const eventStrength = eventEffectsActive(game)
     ? card.eventEffects
       .filter((effect) => effect.need === need && effect.amount > 0)
       .reduce((total, effect) => total + effect.amount, 0)
@@ -86,7 +83,7 @@ function createdBonusEffects(game: GameState, card: StrategyCard): CreatedBonusE
   }
 
   card.effects.forEach((effect) => add(effect.need, effect.amount, false))
-  if (game.situation.event) card.eventEffects.forEach((effect) => add(effect.need, effect.amount, true))
+  if (eventEffectsActive(game)) card.eventEffects.forEach((effect) => add(effect.need, effect.amount, true))
   return [...grouped.values()]
 }
 

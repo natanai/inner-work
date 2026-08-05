@@ -1,0 +1,79 @@
+html[data-strategy-hand='undocked'] .mobile-hand-section > header,
+html[data-strategy-hand='undocked'] .mobile-hand-section > .mobile-hand-carousel {
+  display: none !important;
+}
+
+.phase-aware-inline-hand {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.phase-aware-inline-hand > button {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(72px, auto);
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(91, 53, 34, .18);
+  border-radius: 15px;
+  background: #fff9e9;
+  color: #4b2d20;
+  text-align: left;
+  box-shadow: 0 8px 18px rgba(57, 28, 18, .1);
+}
+
+.phase-aware-inline-hand > button.selected {
+  box-shadow: 0 0 0 4px rgba(236, 185, 48, .5), 0 10px 20px rgba(57, 28, 18, .16);
+}
+
+.phase-aware-inline-hand > button.private-targeted {
+  box-shadow: 0 0 0 4px rgba(126, 94, 151, .48), 0 10px 20px rgba(57, 28, 18, .16);
+}
+
+.phase-aware-inline-hand .card-face {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.phase-aware-inline-hand > button > span {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 10px;
+}
+
+.phase-aware-inline-hand small {
+  color: #9a6148;
+  font-size: .63rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.phase-aware-inline-hand strong {
+  overflow: hidden;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: .92rem;
+  line-height: 1.1;
+}
+
+.phase-aware-inline-hand b {
+  justify-self: start;
+  margin-top: 3px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #713326;
+  color: #fff1cc;
+  font-size: .6rem;
+}
+
+@media (max-width: 390px) {
+  .phase-aware-inline-hand { grid-template-columns: 1fr; }
+  .phase-aware-inline-hand > button { grid-template-columns: 120px minmax(0, 1fr); grid-template-rows: auto; }
+}

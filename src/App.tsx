@@ -16,8 +16,13 @@ import { StickyStrategyHand } from './tabletop/StickyStrategyHand'
 import { TactileExperienceLayer } from './tabletop/TactileExperienceLayer'
 import { TradeDiscussionLayer } from './tabletop/TradeDiscussionLayer'
 import { choosePrivateNeed } from './tabletop/privateNeedChoice'
-import { continueRound, createGame, nextSituation, type GameState } from './tabletop/model'
-import { resolveRound } from './tabletop/rulebookResolution'
+import type { GameState } from './tabletop/model'
+import {
+  continueTimedRound,
+  createTimedGame,
+  nextTimedSituation,
+  resolveTimedRound,
+} from './tabletop/timedSpecialActions'
 
 function usePhoneLayout(): boolean {
   const query = '(max-width: 760px)'
@@ -41,7 +46,7 @@ function usePhoneLayout(): boolean {
 function Home({ onStart }: { onStart: () => void }) {
   const [rules, setRules] = useState(false)
   return <main className="home-page"><section className="home-table">
-    <div className="home-copy"><span>A cooperative card game for one whole person</span><h1>Inner<br />Work</h1><p>Play as Cognition α alongside two hidden-hand NPCs. Discuss the Public Needs, trade Strategies, and coordinate a response to each Situation.</p><div><button className="primary" onClick={onStart}>Set up the table</button><button className="quiet" onClick={() => setRules(!rules)}>{rules ? 'Hide overview' : 'How it plays'}</button></div>{rules && <aside><strong>Cooperate without losing your private goals.</strong><p>Choose one of three Needs to keep Private. Each Cognition may play a Strategy only when it tends its own Public Need or an active Bonus Need. Trade during Discussion, commit simultaneously, then reveal how each legal play also affects every matching Public and Private Need.</p></aside>}</div>
+    <div className="home-copy"><span>A cooperative card game for one whole person</span><h1>Inner<br />Work</h1><p>Play as Cognition α alongside two hidden-hand NPCs. Discuss the Public Needs, trade Strategies, and coordinate a response to each Situation.</p><div><button className="primary" onClick={onStart}>Set up the table</button><button className="quiet" onClick={() => setRules(!rules)}>{rules ? 'Hide overview' : 'How it plays'}</button></div>{rules && <aside><strong>Cooperate without losing your private goals.</strong><p>Choose one of three Needs to keep Private. Each Cognition may play a Strategy only when it tends its own Public Need or an active Bonus Need. Discussion Actions change the table immediately; Start-of-Play Actions remain hidden with the Strategy they modify.</p></aside>}</div>
     <div className="home-cards"><CardBack kind="need" /><CardBack kind="strategy" /><CardBack kind="situation" /></div>
   </section></main>
 }
@@ -97,7 +102,7 @@ export default function App() {
     setReadyScreen(destination)
     setScreen('loading')
   }
-  const start = () => prepare(createGame(), 'private-choice')
+  const start = () => prepare(createTimedGame(), 'private-choice')
 
   if (!game || screen === 'home') return <Home onStart={start} />
   if (screen === 'loading') return <LoadingScreen game={game} onReady={() => setScreen(readyScreen)} />
@@ -116,14 +121,14 @@ export default function App() {
       return
     }
     if (game.phase === 'planning') {
-      setGame(resolveRound(game))
+      setGame(resolveTimedRound(game))
       return
     }
-    prepare(continueRound(game), 'play')
+    prepare(continueTimedRound(game), 'play')
   }
   const handleNextSituation = () => {
     const chooseAgain = game.cognitions[0].privateNeed.gifts === 0
-    prepare(nextSituation(game), chooseAgain ? 'private-choice' : 'deal')
+    prepare(nextTimedSituation(game), chooseAgain ? 'private-choice' : 'deal')
   }
   const handleEnd = () => setScreen('end')
   const mobileStoryActive = phone && game.phase !== 'planning'
