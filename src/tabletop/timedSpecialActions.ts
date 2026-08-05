@@ -226,8 +226,9 @@ function chooseNpcCommit(game: GameState, cognition: Cognition): string | null {
   const ordinary = cognition.hand.filter((card) => !isSpecialAction(card))
   const visible = ordinary.filter((card) => canPlayVisible(game, cognition, card))
   const privateMatch = ordinary.find((card) => privateAssignmentMatches(game, cognition, card)) ?? null
-  const sa2 = cognition.hand.find((card) => card.id === 'SA2')
-  const sa7 = cognition.hand.find((card) => card.id === 'SA7')
+  const mayUseStartAction = !cognitionUsedSpecialAction(game, cognition.id)
+  const sa2 = mayUseStartAction ? cognition.hand.find((card) => card.id === 'SA2') : null
+  const sa7 = mayUseStartAction ? cognition.hand.find((card) => card.id === 'SA7') : null
 
   if (sa2 && privateMatch) {
     return encodeCommit({ strategyId: privateMatch.id, specialId: 'SA2', target: null, playForPrivate: true })
@@ -276,7 +277,7 @@ export function prepareNpcDiscussionActions(game: GameState): GameState {
   return next
 }
 
-function failedPrivateResolution(game: GameState, cognition: Cognition, strategy: StrategyCard, specialId: string | null): Resolution {
+function failedPrivateResolution(_game: GameState, cognition: Cognition, strategy: StrategyCard, specialId: string | null): Resolution {
   const special = specialActionById(specialId)
   const specialSummary = specialId === 'SA2'
     ? `${cognition.name} assigned “${strategy.title}” specifically to its hidden Private Need through Deep Introspection, but the Strategy did not tend that Need.`
