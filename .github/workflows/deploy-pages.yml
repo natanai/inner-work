@@ -41,6 +41,8 @@ jobs:
         run: npm run test:mobile-ux
       - name: Test participant identity consistency
         run: npm run test:participant-identity
+      - name: Test card UX system
+        run: npm run test:card-ux
       - name: Analyze meaningful choices
         run: npm run analyze:choices
       - name: Configure Pages

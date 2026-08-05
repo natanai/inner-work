@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CognitionSeatBadge } from './CognitionSeatBadge'
 import { cognitionIdentity } from './cognitionIdentity'
 import { normalizeSharedPersonName } from './gameParticipants'
 import type { GameState } from './model'
@@ -24,7 +25,7 @@ export function SharedPersonSetupScreen({
         <p>Each Cognition brings different Needs and possible Strategies. Together, they shape what one person does next.</p>
 
         <div className={`shared-person-player owner-${player.id}`}>
-          <b aria-label={`Seat ${identity.seat}`}>{identity.seat}</b>
+          <CognitionSeatBadge cognition={player} size="large" />
           <span>You are</span>
           <strong>{identity.name}</strong>
         </div>

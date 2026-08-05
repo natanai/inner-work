@@ -1,0 +1,181 @@
+/*
+ * Shared interaction primitives for card-game surfaces.
+ * Loaded last so older screen-specific CSS cannot re-invent seat badges,
+ * Bonus provenance, or the planning/trade hierarchy.
+ */
+
+.cognition-seat-badge {
+  display: inline-grid !important;
+  place-items: center !important;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: var(--cognition-token-ink, #fff9e9) !important;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: .82rem !important;
+  font-style: normal;
+  font-weight: 850 !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  text-align: center;
+  text-indent: 0;
+  vertical-align: middle;
+}
+
+/* Screens not yet migrated to the component still inherit its visual grammar. */
+.cognition-identity-token,
+.strategy-cognition-token,
+.desktop-owner-token,
+.situation-need-owner,
+.true-need-owner-badge,
+.responsibility-card > header > b,
+.desktop-cognition-column > header > b,
+.mobile-cognition-list article > b,
+.shared-person-player > b,
+.mobile-bank-personal > b {
+  display: inline-grid !important;
+  place-items: center !important;
+  box-sizing: border-box;
+  padding: 0 !important;
+  border-radius: 999px;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-style: normal !important;
+  font-weight: 850 !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  text-indent: 0 !important;
+}
+
+.cognition-seat-badge.size-small { width: 24px; height: 24px; font-size: .72rem !important; }
+.cognition-seat-badge.size-medium { width: 31px; height: 31px; }
+.cognition-seat-badge.size-large { width: 44px; height: 44px; font-size: 1rem !important; }
+.cognition-seat-badge.owner-alpha { background: var(--cognition-alpha, #984a37) !important; }
+.cognition-seat-badge.owner-beta { background: var(--cognition-beta, #62774e) !important; }
+.cognition-seat-badge.owner-gamma { background: var(--cognition-gamma, #89734c) !important; }
+
+/* A Bonus Need's history belongs with its detailed explanation, not the quick scan. */
+.strategy-detail-row.bonus {
+  min-height: 50px;
+}
+
+.strategy-detail-row > span > small.strategy-bonus-origin {
+  margin-top: 3px;
+  overflow: visible;
+  color: #6f4b3d;
+  font-size: .56rem;
+  font-weight: 750;
+  line-height: 1.22;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* The Trade tile enters one focused workspace; there is no second Trade toggle. */
+.planning-trade-workspace {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.planning-back {
+  justify-self: start;
+  min-height: 40px;
+  padding: 7px 11px;
+  border: 1px solid rgba(82, 47, 32, .18);
+  border-radius: 999px;
+  background: #fff9e9;
+  color: #663a2b;
+  font: 800 .72rem/1.1 ui-sans-serif, system-ui, sans-serif;
+}
+
+.planning-trade-workspace > header {
+  display: grid;
+  gap: 4px;
+}
+
+.planning-trade-workspace > header > span {
+  color: #a45e45;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.planning-trade-workspace > header h2 {
+  margin: 0;
+  color: #4d2c21;
+  font-size: clamp(1.25rem, 5vw, 1.75rem);
+  line-height: 1.05;
+}
+
+.planning-trade-workspace > header p {
+  margin: 0;
+  color: #765447;
+  font-size: .76rem;
+  line-height: 1.35;
+}
+
+.planning-trade-workspace .trade-room {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.planning-view-trade .discussion-dialog-inner > footer {
+  margin-top: 2px;
+}
+
+@media (max-width: 760px) {
+  /* The Situation art already provides context; the Need cards begin immediately. */
+  .mobile-table-snapshot {
+    margin-top: 0 !important;
+  }
+
+  .mobile-table-snapshot > div {
+    padding-top: 6px !important;
+  }
+
+  .planning-view-trade .discussion-dialog-inner {
+    gap: 10px;
+  }
+
+  .planning-view-trade .discussion-dialog-header h1 {
+    font-size: clamp(1.75rem, 9vw, 2.4rem);
+  }
+
+  .planning-trade-workspace .trade-proposal-list {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(88vw, 350px);
+    gap: 10px;
+    padding: 2px 2px 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .planning-trade-workspace .trade-proposal {
+    scroll-snap-align: start;
+  }
+
+  .planning-trade-workspace .directed-trade-panel {
+    margin-top: 2px;
+    border-top: 1px solid rgba(85, 48, 31, .14);
+    padding-top: 12px;
+  }
+
+  .planning-cognition-snapshot > header > .cognition-seat-badge {
+    width: 31px;
+    height: 31px;
+  }
+
+  .mobile-bank-personal > .cognition-seat-badge {
+    width: 28px;
+    height: 28px;
+  }
+}
