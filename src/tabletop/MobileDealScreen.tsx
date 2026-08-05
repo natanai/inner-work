@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Cognition, GameState } from './model'
 import { CardBack, CardFace, GiftIcon, type CardKind } from './Cards'
+import { CognitionSeatBadge } from './CognitionSeatBadge'
 import { cognitionIdentity } from './cognitionIdentity'
 import { Deck } from './DealScreen'
 
@@ -20,7 +21,7 @@ function MobileCognitionDeal({ cognition, human, step, onInspect }: {
   return (
     <section className={`mobile-deal-cognition owner-${cognition.id} ${human ? 'human' : ''} ${step >= 2 ? 'visible' : ''}`}>
       <header className="cognition-identity-line">
-        <b className={`cognition-identity-token owner-${cognition.id}`}>{identity.seat}</b>
+        <CognitionSeatBadge cognition={cognition} />
         <div className="cognition-role-name"><small>{identity.role}</small><strong>{identity.name}</strong></div>
       </header>
       <div className="mobile-deal-need-row">
