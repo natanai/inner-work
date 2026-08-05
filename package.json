@@ -13,7 +13,8 @@
     "analyze:choices": "node scripts/analyze-choice-floor.mjs",
     "test:special-actions": "node scripts/special-actions-engine-check.mjs",
     "test:special-timing": "node scripts/special-action-timing-check.mjs",
-    "test:choice-integrity": "node scripts/choice-integrity-check.mjs"
+    "test:choice-integrity": "node scripts/choice-integrity-check.mjs",
+    "test:cognition-names": "node scripts/cognition-name-check.mjs"
   },
   "dependencies": {
     "react": "19.2.8",
