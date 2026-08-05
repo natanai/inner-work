@@ -1,8 +1,10 @@
 import { GiftIcon } from './Cards'
+import { cognitionIdentity } from './cognitionIdentity'
 import type { GameState } from './model'
 
 export function MobileInventoryBank({ game }: { game: GameState }) {
   const player = game.cognitions.find((cognition) => cognition.human) ?? game.cognitions[0]
+  const identity = cognitionIdentity(player)
   const personalScore = player.privateScore + player.bonusScore
   const magnifierReady = game.phase === 'planning' && !player.magnifierUsed
 
@@ -19,8 +21,8 @@ export function MobileInventoryBank({ game }: { game: GameState }) {
         <strong>{game.sharedScore}</strong>
       </div>
 
-      <div className="mobile-bank-item mobile-bank-personal" aria-label={`${personalScore} personal points`}>
-        <b aria-hidden="true">α</b>
+      <div className="mobile-bank-item mobile-bank-personal" aria-label={`${personalScore} personal points for ${identity.name}`}>
+        <b aria-hidden="true">{identity.seat}</b>
         <span>Yours</span>
         <strong>{personalScore}</strong>
       </div>
