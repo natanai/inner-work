@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CardBack, CardFace, GiftIcon, type CardKind } from './Cards'
+import { CognitionSeatBadge } from './CognitionSeatBadge'
 import { parseCommit } from './commitSelection'
 import { cognitionIdentity } from './cognitionIdentity'
 import type { Cognition, GameState, NeedSlot } from './model'
@@ -21,7 +22,7 @@ function CognitionSnapshot({ cognition }: { cognition: Cognition }) {
   const identity = cognitionIdentity(cognition)
   return (
     <article className={`planning-cognition-snapshot owner-${cognition.id}`}>
-      <header><b>{identity.seat}</b><div><span>{identity.role}</span><strong>{identity.name}</strong></div></header>
+      <header><CognitionSeatBadge cognition={cognition} /><div><span>{identity.role}</span><strong>{identity.name}</strong></div></header>
       <div>{cognition.publicNeeds.map((slot) => <NeedSummary key={slot.card.id} cognition={cognition} slot={slot} />)}</div>
     </article>
   )
@@ -34,8 +35,7 @@ function PlayPanel({ game, onInspect }: { game: GameState; onInspect: (inspectio
         <CardFace kind="situation" id={game.situation.id} />
         <span>Tap to read full-size</span>
       </button>
-      <section className="planning-snapshot mobile-table-snapshot" aria-label="Public Needs at a glance">
-        <header><span>Needs at a glance</span><strong>Each Cognition qualifies through its own unresolved Needs.</strong></header>
+      <section className="planning-snapshot mobile-table-snapshot" aria-label="Public Needs in play">
         <div>{game.cognitions.map((cognition) => <CognitionSnapshot key={cognition.id} cognition={cognition} />)}</div>
       </section>
       <section className="mobile-hand-section" aria-label="Your Strategy hand" />
@@ -55,7 +55,7 @@ function NeedsPanel({ game, onInspect, onMagnifier }: { game: GameState; onInspe
             <div className="mobile-panel-need-list">
               {cognition.publicNeeds.map((slot) => (
                 <button className="situation-need-tile compact" key={slot.card.id} onClick={() => onInspect({ kind: 'need', id: slot.card.id, label: `${slot.card.feeling}: ${slot.card.need}` })}>
-                  <span className="situation-need-owner">{identity.seat}</span>
+                  <CognitionSeatBadge cognition={cognition} size="small" className="situation-need-owner" />
                   <span className="situation-need-copy"><small>{slot.card.feeling}</small><strong>{slot.card.need}</strong></span>
                   <span className="situation-need-gifts"><GiftIcon variation={cognition.id === 'beta' ? 1 : cognition.id === 'gamma' ? 2 : 0} /><b>{slot.gifts}</b></span>
                 </button>
@@ -89,8 +89,8 @@ function CognitionsPanel({ game }: { game: GameState }) {
         {game.cognitions.map((cognition) => {
           const identity = cognitionIdentity(cognition)
           return (
-            <article key={cognition.id}>
-              <b>{identity.seat}</b>
+            <article key={cognition.id} className={`owner-${cognition.id}`}>
+              <CognitionSeatBadge cognition={cognition} />
               <div><span>{identity.role}</span><h2>{identity.name}</h2><p>{cognition.publicNeeds.map((slot) => slot.card.need).join(' · ')}</p></div>
               <aside><strong>{cognition.hand.length}</strong><span>cards</span><strong>{cognition.privateScore + cognition.bonusScore}</strong><span>individual</span></aside>
             </article>
