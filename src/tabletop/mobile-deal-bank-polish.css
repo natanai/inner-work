@@ -77,6 +77,7 @@
     display: grid;
     grid-template-columns: 26px minmax(0, 1fr);
     grid-template-rows: auto auto;
+    grid-template-areas: 'icon label' 'icon value';
     align-items: center;
     column-gap: 5px;
     min-width: 0;
@@ -90,7 +91,8 @@
     text-align: left;
   }
 
-  .mobile-bank-item > span {
+  .mobile-bank-label {
+    grid-area: label;
     align-self: end;
     overflow: hidden;
     color: #e8c879;
@@ -98,33 +100,27 @@
     font-weight: 800;
     letter-spacing: .055em;
     line-height: 1;
-    text-overflow: ellipsis;
     text-transform: uppercase;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
-  .mobile-bank-item > strong {
+  .mobile-bank-value {
+    grid-area: value;
     align-self: start;
     font-size: .72rem;
     line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
   }
 
   .mobile-bank-group .gift-piece,
-  .mobile-bank-personal > b,
+  .mobile-bank-personal > .cognition-seat-badge,
   .mobile-bank-magnifier > svg {
-    grid-column: 1;
-    grid-row: 1 / 3;
+    grid-area: icon;
+    align-self: center;
     width: 25px;
     height: 25px;
-  }
-
-  .mobile-bank-personal > b {
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: #efbd43;
-    color: #522c20;
-    font: 800 .9rem 'Fraunces', serif;
   }
 
   .mobile-bank-magnifier {
@@ -178,7 +174,7 @@
     }
 
     .mobile-bank-group .gift-piece,
-    .mobile-bank-personal > b,
+    .mobile-bank-personal > .cognition-seat-badge,
     .mobile-bank-magnifier > svg {
       width: 22px;
       height: 22px;

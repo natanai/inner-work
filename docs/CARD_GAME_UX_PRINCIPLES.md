@@ -52,6 +52,8 @@ Applied in Inner Work:
 - The badge always displays seat 1, 2, or 3.
 - Owner color, typeface, centering, accessible label, and numeric styling live in one component and one final CSS system.
 - Internal `alpha`, `beta`, and `gamma` ids never become display text.
+- Layouts place the shared badge by its class or a named grid area, rather than assuming a particular HTML tag. Label styles must not also select the badge.
+- Personal scores are labeled “Your points,” with the seat marker visually separated from the score. Check the rendered layout in both hand modes, reference tabs, and committed-card states.
 
 ## 6. Preserve provenance for generated game objects
 

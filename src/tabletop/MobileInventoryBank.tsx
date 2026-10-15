@@ -18,14 +18,14 @@ export function MobileInventoryBank({ game }: { game: GameState }) {
     <aside className="mobile-inventory-bank" aria-label="Score bank and inventory">
       <div className="mobile-bank-item mobile-bank-group" aria-label={`${game.sharedScore} shared group gifts`}>
         <GiftIcon variation={0} />
-        <span>Group</span>
-        <strong>{game.sharedScore}</strong>
+        <span className="mobile-bank-label">Group</span>
+        <strong className="mobile-bank-value">{game.sharedScore}</strong>
       </div>
 
       <div className="mobile-bank-item mobile-bank-personal" aria-label={`${personalScore} personal points for ${identity.name}`}>
         <CognitionSeatBadge cognition={player} size="small" />
-        <span>Yours</span>
-        <strong>{personalScore}</strong>
+        <span className="mobile-bank-label">Your points</span>
+        <strong className="mobile-bank-value">{personalScore}</strong>
       </div>
 
       <button
@@ -40,8 +40,8 @@ export function MobileInventoryBank({ game }: { game: GameState }) {
           <path d="m22 22 10 10" />
           <path className="shine" d="M10 12c1.2-2 3-3 5.4-3" />
         </svg>
-        <span>Magnifier</span>
-        <strong>{player.magnifierUsed ? 'Used' : 'Ready'}</strong>
+        <span className="mobile-bank-label">Magnifier</span>
+        <strong className="mobile-bank-value">{player.magnifierUsed ? 'Used' : 'Ready'}</strong>
       </button>
     </aside>
   )
