@@ -58,17 +58,17 @@
     column-gap: 4px;
   }
 
-  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-item > span {
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-label {
     font-size: .4rem;
     letter-spacing: .045em;
   }
 
-  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-item > strong {
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-value {
     font-size: .64rem;
   }
 
   body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-group .gift-piece,
-  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-personal > b,
+  body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-personal > .cognition-seat-badge,
   body:has(.mobile-play-page.mobile-tab-play) .mobile-bank-magnifier > svg {
     width: 21px;
     height: 21px;
@@ -96,17 +96,17 @@
     column-gap: 5px;
   }
 
-  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-item > span {
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-label {
     font-size: .46rem;
     letter-spacing: .055em;
   }
 
-  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-item > strong {
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-value {
     font-size: .72rem;
   }
 
   body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-group .gift-piece,
-  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-personal > b,
+  body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-personal > .cognition-seat-badge,
   body:has(.mobile-play-page.mobile-tab-play .mobile-action-dock .primary:not(:disabled)) .mobile-bank-magnifier > svg {
     width: 25px;
     height: 25px;

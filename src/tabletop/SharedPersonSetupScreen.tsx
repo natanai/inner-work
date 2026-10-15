@@ -26,8 +26,8 @@ export function SharedPersonSetupScreen({
 
         <div className={`shared-person-player owner-${player.id}`}>
           <CognitionSeatBadge cognition={player} size="large" />
-          <span>You are</span>
-          <strong>{identity.name}</strong>
+          <span className="shared-person-player-label">You are</span>
+          <strong className="shared-person-player-name">{identity.name}</strong>
         </div>
 
         <label htmlFor="shared-person-name">Who are you collectively influencing?</label>
